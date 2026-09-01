@@ -1,55 +1,21 @@
-# Engineering PDM Phase 1 — Exact File Contents
-
-Copy each section into the matching path.
+# Engineering PDM Phase 2 � Exact File Contents
 
 ## `README.md`
 
 ```md
-# Engineering PDM — Phase 1
+# Engineering PDM — Phase 2
 
-Frontend-only Next.js mock implementation of the drawing checking / approval / manufacturing workflow.
+Next.js + TypeScript engineering PDM workflow with Supabase-backed job and stock data.
 
 ## Requirements
 - Node.js 18.17+ (Node 20 LTS recommended)
 - npm
+- Supabase project
 
 ## Run
 ```bash
 npm install
 npm run dev
-```
-Open http://localhost:3000
-
-## Mock Admin Login
-Password: `pdm-admin`
-
-This is intentionally local/mock authentication only. It must be replaced in the backend/auth phase.
-
-## Phase 1 persistence
-Jobs and uploaded PDF data are stored in the browser's `localStorage`. This is useful only for a frontend prototype. Browser storage is small, so large PDFs may exceed the quota. Seeded sample jobs contain filename metadata but no real PDF bytes.
-
-## Routes
-- `/` Home
-- `/new-job` New Job
-- `/jobs` Existing Jobs
-- `/jobs/[id]` Individual Job
-- `/admin/login` Admin Login
-- `/admin` Admin Dashboard
-- `/admin/jack` Jack Inbox
-- `/admin/raag` Raag Inbox
-- `/admin/manufacturing` Manufacturing
-- `/admin/completed` Completed Jobs
-- `/admin/jobs/[id]` Admin Job Review
-
-## Workflow implemented
-1. New Job -> Awaiting Check
-2. Checker -> Work in Progress OR Awaiting Approval
-3. WIP revision -> Awaiting Check, same checker retained
-4. Approver -> Work in Progress OR Awaiting Manufacturing
-5. Awaiting Manufacturing -> Complete by Jack or Raag
-6. Comments append chronologically
-7. PDF versions append and never overwrite
-8. Workflow events append chronologically
 ```
 
 ## `app/admin/completed/page.tsx`
@@ -133,7 +99,9 @@ export default function AdminLoginPage() {
     window.sessionStorage.setItem("pdm-admin-auth", "true");
     router.push("/admin");
   };
-  return <main><div className="card stack" style={{ maxWidth: 520, margin: "40px auto" }}><h1 style={{ margin: 0 }}>Admin Login</h1><div className="warning"><strong>Phase 1 mock only:</strong> use password <code>pdm-admin</code>. Replace this completely when real authentication is added.</div><form className="stack" onSubmit={submit}><div className="field"><label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>{error && <div className="warning">{error}</div>}<button className="btn btn-primary">Login</button></form></div></main>;
+  return <main><div className="card stack" style={{ maxWidth: 520, margin: "40px auto" }}><h1 style={{ margin: 0 }}>Admin Login</h1><div className="warning">
+  <strong>Temporary admin login:</strong> use password <code>pdm-admin</code>. This will be replaced when real authentication is added.
+</div><form className="stack" onSubmit={submit}><div className="field"><label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>{error && <div className="warning">{error}</div>}<button className="btn btn-primary">Login</button></form></div></main>;
 }
 ```
 
@@ -151,17 +119,75 @@ export default function ManufacturingPage() { const { jobs } = useJobs(); return
 
 ```tsx
 "use client";
+
 import Link from "next/link";
+
 import { AdminGuard } from "@/components/AdminGuard";
+
 import { useJobs } from "@/lib/jobStore";
 
 export default function AdminPage() {
-  const { jobs, resetDemo } = useJobs();
-  const jack = jobs.filter(j => (j.status === "Awaiting Check" && j.checker === "Jack") || (j.status === "Awaiting Approval" && j.approver === "Jack")).length;
-  const raag = jobs.filter(j => (j.status === "Awaiting Check" && j.checker === "Raag") || (j.status === "Awaiting Approval" && j.approver === "Raag")).length;
-  const mfg = jobs.filter(j => j.status === "Awaiting Manufacturing").length;
-  const done = jobs.filter(j => j.status === "Complete").length;
-  return <main><AdminGuard><div className="page-heading"><div><h1>Admin Dashboard</h1><p>Route work between checking, approval, manufacturing, and completion.</p></div><button className="btn" onClick={resetDemo}>Reset Demo Data</button></div><div className="admin-grid"><Link className="admin-tile" href="/admin/jack"><h2>Jack Inbox</h2><p>{jack} job(s) currently need Jack&apos;s action.</p></Link><Link className="admin-tile" href="/admin/raag"><h2>Raag Inbox</h2><p>{raag} job(s) currently need Raag&apos;s action.</p></Link><Link className="admin-tile" href="/admin/manufacturing"><h2>Manufacturing</h2><p>{mfg} approved job(s) are awaiting manufacturing.</p></Link><Link className="admin-tile" href="/admin/completed"><h2>Completed Jobs</h2><p>{done} completed job(s) are archived here.</p></Link></div></AdminGuard></main>;
+  const { jobs } = useJobs();
+
+  const jack = jobs.filter(
+    (j) =>
+      (j.status === "Awaiting Check" && j.checker === "Jack") ||
+      (j.status === "Awaiting Approval" && j.approver === "Jack")
+  ).length;
+
+  const raag = jobs.filter(
+    (j) =>
+      (j.status === "Awaiting Check" && j.checker === "Raag") ||
+      (j.status === "Awaiting Approval" && j.approver === "Raag")
+  ).length;
+
+  const mfg = jobs.filter(
+    (j) => j.status === "Awaiting Manufacturing"
+  ).length;
+
+  const done = jobs.filter(
+    (j) => j.status === "Complete"
+  ).length;
+
+  return (
+    <main>
+      <AdminGuard>
+        <div className="page-heading">
+          <div>
+            <h1>Admin Dashboard</h1>
+            <p>
+              Route work between checking, approval,
+              manufacturing, and completion.
+            </p>
+          </div>
+        </div>
+
+        <div className="admin-grid">
+          <Link className="admin-tile" href="/admin/jack">
+            <h2>Jack Inbox</h2>
+            <p>{jack} job(s) currently need Jack&apos;s action.</p>
+          </Link>
+
+          <Link className="admin-tile" href="/admin/raag">
+            <h2>Raag Inbox</h2>
+            <p>{raag} job(s) currently need Raag&apos;s action.</p>
+          </Link>
+
+          <Link className="admin-tile" href="/admin/manufacturing">
+            <h2>Manufacturing</h2>
+            <p>
+              {mfg} approved job(s) are awaiting manufacturing.
+            </p>
+          </Link>
+
+          <Link className="admin-tile" href="/admin/completed">
+            <h2>Completed Jobs</h2>
+            <p>{done} completed job(s) are archived here.</p>
+          </Link>
+        </div>
+      </AdminGuard>
+    </main>
+  );
 }
 ```
 
@@ -336,10 +362,22 @@ export default function JobPage() {
 
   const resubmit = async () => {
     if (!file) return;
+  
     setWorking(true);
-    const dataUrl = await fileToDataUrl(file);
-    resubmitJob(job.id, file.name, dataUrl, comment);
-    setWorking(false); setFile(null); setComment("");
+  
+    try {
+      const dataUrl = await fileToDataUrl(file);
+  
+      await resubmitJob(job.id, file.name, dataUrl, comment);
+  
+      setFile(null);
+      setComment("");
+    } catch (error) {
+      console.error("Failed to resubmit job:", error);
+      alert("Failed to resubmit job. Check the console for details.");
+    } finally {
+      setWorking(false);
+    }
   };
 
   return <main className="stack">
@@ -364,7 +402,7 @@ import { useJobs } from "@/lib/jobStore";
 
 export default function JobsPage() {
   const { jobs, ready } = useJobs();
-  return <main><div className="page-heading"><div><h1>Existing Jobs</h1><p>All jobs currently stored in the Phase 1 browser mock.</p></div></div>{ready ? <JobsTable jobs={jobs} /> : <Loading />}</main>;
+  return <main><div className="page-heading"><div><h1>Existing Jobs</h1><p>All jobs currently stored in the PDM database.</p></div></div>{ready ? <JobsTable jobs={jobs} /> : <Loading />}</main>;
 }
 ```
 
@@ -375,7 +413,10 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { JobStoreProvider } from "@/lib/jobStore";
 
-export const metadata = { title: "Engineering PDM", description: "Phase 1 mock engineering PDM workflow" };
+export const metadata = {
+  title: "Engineering PDM",
+  description: "Engineering PDM workflow system",
+};
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="en"><body><JobStoreProvider><div className="shell"><Header />{children}</div></JobStoreProvider></body></html>;
@@ -386,11 +427,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
 ```tsx
 "use client";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useJobs } from "@/lib/jobStore";
 import { fileToDataUrl } from "@/lib/utils";
 import { Person } from "@/lib/types";
+import {
+  getActiveStockOptions,
+  StockOption
+} from "@/lib/stockRepository";
 
 const opposite = (person: Person): Person => person === "Jack" ? "Raag" : "Jack";
 
@@ -401,10 +446,24 @@ export default function NewJobPage() {
   const [pdf, setPdf] = useState<File | null>(null);
   const [comments, setComments] = useState("");
   const [stock, setStock] = useState("");
+  const [stockOptions, setStockOptions] = useState<StockOption[]>([]);
   const [date, setDate] = useState("");
   const [checker, setChecker] = useState<Person>("Jack");
   const [approver, setApprover] = useState<Person>("Raag");
   const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    const loadStockOptions = async () => {
+      try {
+        const options = await getActiveStockOptions();
+        setStockOptions(options);
+      } catch (error) {
+        console.error("Unable to load stock options:", error);
+      }
+    };
+  
+    loadStockOptions();
+  }, []);
 
   const complete = useMemo(() => Boolean(title.trim() && pdf && comments.trim() && stock && date && checker && approver && checker !== approver), [title, pdf, comments, stock, date, checker, approver]);
 
@@ -416,21 +475,49 @@ export default function NewJobPage() {
     if (!complete || !pdf) return;
     setWorking(true);
     const dataUrl = await fileToDataUrl(pdf);
-    createJob({ title: title.trim(), stock, desiredCompletionDate: date, checker, approver, originalComments: comments.trim(), pdf: { filename: pdf.name, dataUrl } });
+    await createJob({
+      title: title.trim(),
+      stock,
+      desiredCompletionDate: date,
+      checker,
+      approver,
+      originalComments: comments.trim(),
+      pdf: {
+        filename: pdf.name,
+        dataUrl
+      }
+    });
     router.push("/jobs");
-  };
-
+};
+  
   return <main>
     <div className="page-heading"><div><h1>New Job</h1><p>Create a new drawing submission for checking.</p></div></div>
     <form className="stack" onSubmit={submit}>
       <div className="card stack">
         <div className="field"><label>Job Title</label><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Injector Plate Rev B" /></div>
         <div className="grid-2">
-          <div className="field"><label>PDF Upload</label><div className="upload-box"><input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files?.[0] ?? null)} /></div><div className="help">Phase 1 stores small uploaded PDFs in browser localStorage only.</div></div>
+          <div className="field"><label>PDF Upload</label><div className="upload-box"><input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files?.[0] ?? null)} /></div><div className="help">
+  PDF file storage will be connected to university cloud storage in a later phase.
+</div></div>
           <div className="field"><label>Comment/Crucial Information</label><textarea value={comments} onChange={(e) => setComments(e.target.value)} placeholder="Include anything the checker and approver must know." /></div>
         </div>
         <div className="grid-3">
-          <div className="field"><label>Stock Selection</label><select value={stock} onChange={(e) => setStock(e.target.value)}><option value="">Select stock…</option><option>6061-T6 Aluminum</option><option>7075-T6 Aluminum</option><option>316 Stainless Steel</option><option>304 Stainless Steel</option><option>1018 Steel</option><option>Delrin / Acetal</option><option>Other / TBD</option></select></div>
+          <div className="field">
+  <label>Stock Selection</label>
+
+  <select
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+  >
+    <option value="">Select stock…</option>
+
+    {stockOptions.map((option) => (
+      <option key={option.id} value={option.name}>
+        {option.name}
+      </option>
+    ))}
+  </select>
+</div>
           <div className="field"><label>Desired Completion Date</label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div />
           <div className="field"><label>Checker</label><select value={checker} onChange={(e) => changeChecker(e.target.value as Person)}><option>Jack</option><option>Raag</option></select></div>
@@ -488,14 +575,31 @@ export function AdminReviewActions({ job, actingAdmin }: { job: Job; actingAdmin
   const { reviewJob } = useJobs();
   const router = useRouter();
 
-  const perform = async (decision: "send-back" | "send-approval" | "approve") => {
+  const perform = async (
+    decision: "send-back" | "send-approval" | "approve"
+  ) => {
     setWorking(true);
-    const dataUrl = markup ? await fileToDataUrl(markup) : undefined;
-    reviewJob(job.id, actingAdmin, decision, comment, markup ? { filename: markup.name, dataUrl } : undefined);
-    setWorking(false);
-    router.push(actingAdmin === "Jack" ? "/admin/jack" : "/admin/raag");
+  
+    try {
+      const dataUrl = markup ? await fileToDataUrl(markup) : undefined;
+  
+      await reviewJob(
+        job.id,
+        actingAdmin,
+        decision,
+        comment,
+        markup ? { filename: markup.name, dataUrl } : undefined
+      );
+  
+      router.push(actingAdmin === "Jack" ? "/admin/jack" : "/admin/raag");
+    } catch (error) {
+      console.error("Failed to review job:", error);
+      alert("Failed to update the job. Check the console for details.");
+    } finally {
+      setWorking(false);
+    }
   };
-
+  
   return (
     <div className="card stack">
       <h2 className="section-title">Admin Action</h2>
@@ -618,7 +722,7 @@ export function PdfViewer({ version }: { version?: DocumentVersion }) {
   return (
     <div className="pdf-panel">
       {version.dataUrl ? <iframe title={version.filename} src={version.dataUrl} /> : (
-        <div className="pdf-placeholder"><div><strong>{version.filename}</strong><br /><br />This seeded demo record has file metadata only. PDFs you upload during Phase 1 can be previewed here while they fit within browser localStorage limits.</div></div>
+        <div className="pdf-placeholder"><div><strong>{version.filename}</strong><br /><br />This file record currently contains metadata only. PDF storage will be connected to university cloud storage in a later phase.</div></div>
       )}
     </div>
   );
@@ -676,224 +780,779 @@ export function WorkflowHistory({ events }: { events: WorkflowEvent[] }) {
 }
 ```
 
+## `lib/jobMapper.ts`
+
+```ts
+import type {
+    CommentEntry,
+    DocumentType,
+    DocumentVersion,
+    Job,
+    JobStatus,
+    Role,
+    WorkflowEvent,
+  } from "@/lib/types";
+  
+  function mapJobStatus(status: string): JobStatus {
+    const statusMap: Record<string, JobStatus> = {
+      work_in_progress: "Work in Progress",
+      awaiting_check: "Awaiting Check",
+      awaiting_approval: "Awaiting Approval",
+      awaiting_manufacturing: "Awaiting Manufacturing",
+      complete: "Complete",
+    };
+  
+    return statusMap[status] ?? "Work in Progress";
+  }
+  
+  function mapDocumentType(type: string): DocumentType {
+    const typeMap: Record<string, DocumentType> = {
+      original_submission: "Original Submission",
+      checker_markup: "Checker Markup",
+      user_revision: "User Revision",
+      approver_markup: "Approver Markup",
+      final_approved: "Final Approved Drawing",
+    };
+  
+    return typeMap[type] ?? "Original Submission";
+  }
+  
+  function mapRole(role: string): Role {
+    const roleMap: Record<string, Role> = {
+      user: "User",
+      checker: "Checker",
+      approver: "Approver",
+      admin: "Admin",
+      manufacturing: "Manufacturing",
+    };
+  
+    return roleMap[role] ?? "User";
+  }
+  
+  export function mapSupabaseJob(row: any): Job {
+    const versions: DocumentVersion[] = (row.job_documents ?? []).map(
+      (document: any) => ({
+        id: document.id,
+        version: document.version_number,
+        type: mapDocumentType(document.document_type),
+        uploadedBy: document.uploaded_by,
+        uploadedAt: document.uploaded_at,
+        filename: document.original_filename,
+      })
+    );
+  
+    const comments: CommentEntry[] = (row.job_comments ?? []).map(
+      (comment: any) => ({
+        id: comment.id,
+        author: comment.author,
+        role: mapRole(comment.author_role),
+        createdAt: comment.created_at,
+        comment: comment.comment,
+      })
+    );
+  
+    const workflow: WorkflowEvent[] = (row.job_history ?? []).map(
+      (event: any) => ({
+        id: event.id,
+        event: event.action,
+        actor: event.performed_by,
+        createdAt: event.created_at,
+      })
+    );
+  
+    const originalComment =
+      comments.find((comment) => comment.role === "User")?.comment ?? "";
+  
+    return {
+      id: String(row.job_number),
+      title: row.title,
+      status: mapJobStatus(row.status),
+      stock: row.stock_options?.name ?? "Unknown",
+      desiredCompletionDate: row.desired_completion_date,
+      checker: row.checker,
+      approver: row.approver,
+      originalComments: originalComment,
+      createdAt: row.created_at,
+      versions,
+      comments,
+      workflow,
+      completedAt: row.completed_at ?? undefined,
+      completedBy: row.completed_by ?? undefined,
+    };
+  }
+```
+
+## `lib/jobRepository.ts`
+
+```ts
+import { supabase } from "@/lib/supabase/client";
+
+import { mapSupabaseJob } from "@/lib/jobMapper";
+
+import type { Job, NewJobInput, Person } from "@/lib/types";
+
+type AdminDecision = "send-back" | "send-approval" | "approve";
+
+export async function getJobsFromSupabase(): Promise<Job[]> {
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(`
+      *,
+      stock_options (
+        name
+      ),
+      job_documents (
+        *
+      ),
+      job_comments (
+        *
+      ),
+      job_history (
+        *
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapSupabaseJob);
+}
+
+export async function createJobInSupabase(
+  input: NewJobInput,
+  stockId: string
+): Promise<Job> {
+  const { data: jobRow, error: jobError } = await supabase
+    .from("jobs")
+    .insert({
+      title: input.title,
+      stock_id: stockId,
+      desired_completion_date: input.desiredCompletionDate,
+      checker: input.checker,
+      approver: input.approver,
+      status: "awaiting_check",
+    })
+    .select(`
+      *,
+      stock_options (
+        name
+      )
+    `)
+    .single();
+
+  if (jobError) {
+    throw jobError;
+  }
+
+  const { error: documentError } = await supabase
+    .from("job_documents")
+    .insert({
+      job_id: jobRow.id,
+      version_number: 1,
+      document_type: "original_submission",
+      original_filename: input.pdf.filename,
+      storage_provider: "pending",
+      uploaded_by: "Engineering User",
+    });
+
+  if (documentError) {
+    throw documentError;
+  }
+
+  const { error: commentError } = await supabase
+    .from("job_comments")
+    .insert({
+      job_id: jobRow.id,
+      author: "Engineering User",
+      author_role: "user",
+      comment: input.originalComments,
+    });
+
+  if (commentError) {
+    throw commentError;
+  }
+
+  const { error: historyError } = await supabase
+    .from("job_history")
+    .insert([
+      {
+        job_id: jobRow.id,
+        previous_status: null,
+        new_status: "awaiting_check",
+        action: "Job created",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+      {
+        job_id: jobRow.id,
+        previous_status: null,
+        new_status: "awaiting_check",
+        action: "Submitted for check",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+    ]);
+
+  if (historyError) {
+    throw historyError;
+  }
+
+  return getFullJob(jobRow.id);
+}
+
+export async function resubmitJobInSupabase(
+  jobId: string,
+  filename: string,
+  comment: string
+): Promise<Job> {
+  const { data: existingJob, error: jobLookupError } = await supabase
+    .from("jobs")
+    .select("id, status")
+    .eq("job_number", jobId)
+    .single();
+
+  if (jobLookupError) {
+    throw jobLookupError;
+  }
+
+  if (existingJob.status !== "work_in_progress") {
+    throw new Error("Job is not in Work in Progress.");
+  }
+
+  const { data: latestDocument, error: documentLookupError } = await supabase
+    .from("job_documents")
+    .select("version_number")
+    .eq("job_id", existingJob.id)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (documentLookupError) {
+    throw documentLookupError;
+  }
+
+  const nextVersion = (latestDocument?.version_number ?? 0) + 1;
+
+  const { error: documentError } = await supabase
+    .from("job_documents")
+    .insert({
+      job_id: existingJob.id,
+      version_number: nextVersion,
+      document_type: "user_revision",
+      original_filename: filename,
+      storage_provider: "pending",
+      uploaded_by: "Engineering User",
+    });
+
+  if (documentError) {
+    throw documentError;
+  }
+
+  if (comment.trim()) {
+    const { error: commentError } = await supabase
+      .from("job_comments")
+      .insert({
+        job_id: existingJob.id,
+        author: "Engineering User",
+        author_role: "user",
+        comment: comment.trim(),
+      });
+
+    if (commentError) {
+      throw commentError;
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("jobs")
+    .update({
+      status: "awaiting_check",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", existingJob.id);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  const { error: historyError } = await supabase
+    .from("job_history")
+    .insert([
+      {
+        job_id: existingJob.id,
+        previous_status: "work_in_progress",
+        new_status: "work_in_progress",
+        action: "Revised drawing uploaded",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+      {
+        job_id: existingJob.id,
+        previous_status: "work_in_progress",
+        new_status: "awaiting_check",
+        action: "Resubmitted for check",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+    ]);
+
+  if (historyError) {
+    throw historyError;
+  }
+
+  return getFullJob(existingJob.id);
+}
+
+export async function reviewJobInSupabase(
+  jobId: string,
+  admin: Person,
+  decision: AdminDecision,
+  comment: string,
+  markup?: { filename: string }
+): Promise<Job> {
+  const { data: existingJob, error: jobLookupError } = await supabase
+    .from("jobs")
+    .select("id, status")
+    .eq("job_number", jobId)
+    .single();
+
+  if (jobLookupError) {
+    throw jobLookupError;
+  }
+
+  const isCheckerStage = existingJob.status === "awaiting_check";
+  const isApprovalStage = existingJob.status === "awaiting_approval";
+
+  if (!isCheckerStage && !isApprovalStage) {
+    throw new Error("Job is not available for review.");
+  }
+
+  let newStatus: string;
+  let action: string;
+  let role: "checker" | "approver";
+
+  if (decision === "send-back") {
+    newStatus = "work_in_progress";
+    action = isCheckerStage ? "Sent back to WIP" : "Approver rejected";
+    role = isCheckerStage ? "checker" : "approver";
+  } else if (decision === "send-approval" && isCheckerStage) {
+    newStatus = "awaiting_approval";
+    action = "Checker passed";
+    role = "checker";
+  } else if (decision === "approve" && isApprovalStage) {
+    newStatus = "awaiting_manufacturing";
+    action = "Approved for manufacturing";
+    role = "approver";
+  } else {
+    throw new Error("Invalid review decision for current job status.");
+  }
+
+  if (comment.trim()) {
+    const { error: commentError } = await supabase
+      .from("job_comments")
+      .insert({
+        job_id: existingJob.id,
+        author: admin,
+        author_role: role,
+        comment: comment.trim(),
+      });
+
+    if (commentError) {
+      throw commentError;
+    }
+  }
+
+  if (markup) {
+    const { data: latestDocument, error: documentLookupError } = await supabase
+      .from("job_documents")
+      .select("version_number")
+      .eq("job_id", existingJob.id)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (documentLookupError) {
+      throw documentLookupError;
+    }
+
+    const nextVersion = (latestDocument?.version_number ?? 0) + 1;
+
+    const { error: markupError } = await supabase
+      .from("job_documents")
+      .insert({
+        job_id: existingJob.id,
+        version_number: nextVersion,
+        document_type: isCheckerStage
+          ? "checker_markup"
+          : "approver_markup",
+        original_filename: markup.filename,
+        storage_provider: "pending",
+        uploaded_by: admin,
+      });
+
+    if (markupError) {
+      throw markupError;
+    }
+  }
+
+  if (decision === "approve" && isApprovalStage) {
+    const { data: latestDocument, error: documentLookupError } = await supabase
+      .from("job_documents")
+      .select("*")
+      .eq("job_id", existingJob.id)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (documentLookupError) {
+      throw documentLookupError;
+    }
+
+    if (latestDocument) {
+      const { error: finalDocumentError } = await supabase
+        .from("job_documents")
+        .insert({
+          job_id: existingJob.id,
+          version_number: latestDocument.version_number + 1,
+          document_type: "final_approved",
+          original_filename: latestDocument.original_filename,
+          storage_provider: latestDocument.storage_provider,
+          external_file_id: latestDocument.external_file_id,
+          storage_path: latestDocument.storage_path,
+          uploaded_by: admin,
+          metadata: latestDocument.metadata,
+        });
+
+      if (finalDocumentError) {
+        throw finalDocumentError;
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("jobs")
+    .update({
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", existingJob.id);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  const { error: historyError } = await supabase
+    .from("job_history")
+    .insert({
+      job_id: existingJob.id,
+      previous_status: existingJob.status,
+      new_status: newStatus,
+      action,
+      performed_by: admin,
+      performed_by_role: role,
+    });
+
+  if (historyError) {
+    throw historyError;
+  }
+
+  return getFullJob(existingJob.id);
+}
+
+export async function markCompleteInSupabase(
+    jobId: string,
+    admin: Person
+  ): Promise<Job> {
+    const { data: existingJob, error: jobLookupError } = await supabase
+      .from("jobs")
+      .select("id, status")
+      .eq("job_number", jobId)
+      .single();
+  
+    if (jobLookupError) {
+      throw jobLookupError;
+    }
+  
+    if (existingJob.status !== "awaiting_manufacturing") {
+      throw new Error("Job is not awaiting manufacturing.");
+    }
+  
+    const completedAt = new Date().toISOString();
+  
+    const { error: updateError } = await supabase
+      .from("jobs")
+      .update({
+        status: "complete",
+        completed_at: completedAt,
+        completed_by: admin,
+        updated_at: completedAt,
+      })
+      .eq("id", existingJob.id);
+  
+    if (updateError) {
+      throw updateError;
+    }
+  
+    const { error: historyError } = await supabase
+      .from("job_history")
+      .insert({
+        job_id: existingJob.id,
+        previous_status: "awaiting_manufacturing",
+        new_status: "complete",
+        action: "Marked complete",
+        performed_by: admin,
+        performed_by_role: "manufacturing",
+      });
+  
+    if (historyError) {
+      throw historyError;
+    }
+  
+    return getFullJob(existingJob.id);
+  }
+
+async function getFullJob(databaseId: string): Promise<Job> {
+  const { data: fullJob, error: fullJobError } = await supabase
+    .from("jobs")
+    .select(`
+      *,
+      stock_options (
+        name
+      ),
+      job_documents (
+        *
+      ),
+      job_comments (
+        *
+      ),
+      job_history (
+        *
+      )
+    `)
+    .eq("id", databaseId)
+    .single();
+
+  if (fullJobError) {
+    throw fullJobError;
+  }
+
+  return mapSupabaseJob(fullJob);
+}
+```
+
 ## `lib/jobStore.tsx`
 
 ```tsx
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+
 import { seedJobs } from "./mockData";
+
 import { Job, NewJobInput, Person } from "./types";
+
 import { uid } from "./utils";
 
-const STORAGE_KEY = "pdm-phase1-jobs";
+import {
+  createJobInSupabase,
+  getJobsFromSupabase,
+  resubmitJobInSupabase,
+  reviewJobInSupabase,
+  markCompleteInSupabase,
+} from "./jobRepository";
+
+import { getActiveStockOptions } from "./stockRepository";
 
 type AdminDecision = "send-back" | "send-approval" | "approve";
 
 interface JobStoreValue {
   jobs: Job[];
   ready: boolean;
-  createJob: (input: NewJobInput) => Job;
-  resubmitJob: (id: string, filename: string, dataUrl: string | undefined, comment: string) => void;
+
+  createJob: (input: NewJobInput) => Promise<Job>;
+
+  resubmitJob: (
+    id: string,
+    filename: string,
+    dataUrl: string | undefined,
+    comment: string
+  ) => Promise<Job>;
+
   reviewJob: (
     id: string,
     admin: Person,
     decision: AdminDecision,
     comment: string,
     markup?: { filename: string; dataUrl?: string }
-  ) => void;
-  markComplete: (id: string, admin: Person) => void;
-  resetDemo: () => void;
+  ) => Promise<Job>;
+
+  markComplete: (id: string, admin: Person) => Promise<Job>;
+
+ 
 }
 
 const JobStoreContext = createContext<JobStoreValue | null>(null);
 
-export function JobStoreProvider({ children }: { children: React.ReactNode }) {
+export function JobStoreProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    async function loadJobs() {
       try {
-        setJobs(JSON.parse(stored));
-      } catch {
+        const supabaseJobs = await getJobsFromSupabase();
+
+        if (supabaseJobs.length > 0) {
+          setJobs(supabaseJobs);
+        } else {
+          setJobs(seedJobs);
+        }
+      } catch (error) {
+        console.error("Failed to load jobs from Supabase:", error);
         setJobs(seedJobs);
+      } finally {
+        setReady(true);
       }
-    } else {
-      setJobs(seedJobs);
     }
-    setReady(true);
+
+    loadJobs();
   }, []);
 
-  useEffect(() => {
-    if (ready) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
-  }, [jobs, ready]);
+  const createJob = async (input: NewJobInput): Promise<Job> => {
+    const stockOption = await getActiveStockOptions();
 
-  const createJob = (input: NewJobInput) => {
-    const stamp = new Date().toISOString();
-    const nextNumber = 1000 + jobs.length + Math.floor(Math.random() * 8000);
-    const job: Job = {
-      id: `PDM-${nextNumber}`,
-      title: input.title,
-      status: "Awaiting Check",
-      stock: input.stock,
-      desiredCompletionDate: input.desiredCompletionDate,
-      checker: input.checker,
-      approver: input.approver,
-      originalComments: input.originalComments,
-      createdAt: stamp,
-      versions: [
-        {
-          id: uid(),
-          version: 1,
-          type: "Original Submission",
-          uploadedBy: "Engineering User",
-          uploadedAt: stamp,
-          filename: input.pdf.filename,
-          dataUrl: input.pdf.dataUrl
-        }
-      ],
-      comments: [],
-      workflow: [
-        { id: uid(), event: "Job created", actor: "Engineering User", createdAt: stamp },
-        { id: uid(), event: "Submitted for check", actor: "Engineering User", createdAt: stamp }
-      ]
-    };
+    const matchingStock = stockOption.find(
+      (option) => option.name === input.stock
+    );
+
+    if (!matchingStock) {
+      throw new Error("Selected stock option was not found.");
+    }
+
+    const job = await createJobInSupabase(input, matchingStock.id);
+
     setJobs((current) => [job, ...current]);
+
     return job;
   };
 
-  const resubmitJob = (id: string, filename: string, dataUrl: string | undefined, comment: string) => {
-    setJobs((current) =>
-      current.map((job) => {
-        if (job.id !== id || job.status !== "Work in Progress") return job;
-        const stamp = new Date().toISOString();
-        const comments = comment.trim()
-          ? [...job.comments, { id: uid(), author: "Engineering User", role: "User" as const, createdAt: stamp, comment: comment.trim() }]
-          : job.comments;
-        return {
-          ...job,
-          status: "Awaiting Check",
-          versions: [
-            ...job.versions,
-            {
-              id: uid(),
-              version: job.versions.length + 1,
-              type: "User Revision",
-              uploadedBy: "Engineering User",
-              uploadedAt: stamp,
-              filename,
-              dataUrl
-            }
-          ],
-          comments,
-          workflow: [
-            ...job.workflow,
-            { id: uid(), event: "Revised drawing uploaded", actor: "Engineering User", createdAt: stamp },
-            { id: uid(), event: "Resubmitted for check", actor: "Engineering User", createdAt: stamp }
-          ]
-        };
-      })
+  const resubmitJob = async (
+    id: string,
+    filename: string,
+    dataUrl: string | undefined,
+    comment: string
+  ): Promise<Job> => {
+    const currentJob = jobs.find((job) => job.id === id);
+
+    if (!currentJob || currentJob.status !== "Work in Progress") {
+      throw new Error("Job is not available for resubmission.");
+    }
+
+    const updatedJob = await resubmitJobInSupabase(
+      id,
+      filename,
+      comment.trim()
     );
+
+    setJobs((current) =>
+      current.map((job) => (job.id === id ? updatedJob : job))
+    );
+
+    return updatedJob;
   };
 
-  const reviewJob: JobStoreValue["reviewJob"] = (id, admin, decision, comment, markup) => {
-    setJobs((current) =>
-      current.map((job) => {
-        if (job.id !== id) return job;
-        const stamp = new Date().toISOString();
-        const isCheckerStage = job.status === "Awaiting Check";
-        const isApprovalStage = job.status === "Awaiting Approval";
-        if (!isCheckerStage && !isApprovalStage) return job;
+  const reviewJob = async (
+    id: string,
+    admin: Person,
+    decision: AdminDecision,
+    comment: string,
+    markup?: { filename: string; dataUrl?: string }
+  ): Promise<Job> => {
+    const currentJob = jobs.find((job) => job.id === id);
 
-        let status = job.status;
-        let event = "";
-        if (decision === "send-back") {
-          status = "Work in Progress";
-          event = isCheckerStage ? "Sent back to WIP" : "Approver rejected";
-        } else if (decision === "send-approval" && isCheckerStage) {
-          status = "Awaiting Approval";
-          event = "Checker passed";
-        } else if (decision === "approve" && isApprovalStage) {
-          status = "Awaiting Manufacturing";
-          event = "Approved for manufacturing";
-        } else {
-          return job;
-        }
+    if (!currentJob) {
+      throw new Error("Job was not found.");
+    }
 
-        const role = isCheckerStage ? "Checker" : "Approver";
-        const comments = comment.trim()
-          ? [...job.comments, { id: uid(), author: admin, role, createdAt: stamp, comment: comment.trim() }]
-          : job.comments;
+    if (
+      currentJob.status !== "Awaiting Check" &&
+      currentJob.status !== "Awaiting Approval"
+    ) {
+      throw new Error("Job is not available for review.");
+    }
 
-        const versions = markup
-          ? [
-              ...job.versions,
-              {
-                id: uid(),
-                version: job.versions.length + 1,
-                type: isCheckerStage ? ("Checker Markup" as const) : ("Approver Markup" as const),
-                uploadedBy: admin,
-                uploadedAt: stamp,
-                filename: markup.filename,
-                dataUrl: markup.dataUrl
-              }
-            ]
-          : decision === "approve"
-          ? [
-              ...job.versions,
-              {
-                ...job.versions[job.versions.length - 1],
-                id: uid(),
-                version: job.versions.length + 1,
-                type: "Final Approved Drawing" as const,
-                uploadedBy: admin,
-                uploadedAt: stamp
-              }
-            ]
-          : job.versions;
-
-        return {
-          ...job,
-          status,
-          comments,
-          versions,
-          workflow: [...job.workflow, { id: uid(), event, actor: admin, createdAt: stamp }]
-        };
-      })
+    const updatedJob = await reviewJobInSupabase(
+      id,
+      admin,
+      decision,
+      comment.trim(),
+      markup
+        ? {
+            filename: markup.filename,
+          }
+        : undefined
     );
+
+    setJobs((current) =>
+      current.map((job) => (job.id === id ? updatedJob : job))
+    );
+
+    return updatedJob;
   };
 
-  const markComplete = (id: string, admin: Person) => {
+  const markComplete = async (
+    id: string,
+    admin: Person
+  ): Promise<Job> => {
+    const currentJob = jobs.find((job) => job.id === id);
+  
+    if (!currentJob || currentJob.status !== "Awaiting Manufacturing") {
+      throw new Error("Job is not available to be marked complete.");
+    }
+  
+    const updatedJob = await markCompleteInSupabase(id, admin);
+  
     setJobs((current) =>
-      current.map((job) => {
-        if (job.id !== id || job.status !== "Awaiting Manufacturing") return job;
-        const stamp = new Date().toISOString();
-        return {
-          ...job,
-          status: "Complete",
-          completedAt: stamp,
-          completedBy: admin,
-          workflow: [...job.workflow, { id: uid(), event: "Marked complete", actor: admin, createdAt: stamp }]
-        };
-      })
+      current.map((job) => (job.id === id ? updatedJob : job))
     );
+  
+    return updatedJob;
   };
 
-  const resetDemo = () => setJobs(seedJobs);
+  
 
   const value = useMemo(
-    () => ({ jobs, ready, createJob, resubmitJob, reviewJob, markComplete, resetDemo }),
+    () => ({
+      jobs,
+      ready,
+      createJob,
+      resubmitJob,
+      reviewJob,
+      markComplete,
+    }),
     [jobs, ready]
   );
 
-  return <JobStoreContext.Provider value={value}>{children}</JobStoreContext.Provider>;
+  return (
+    <JobStoreContext.Provider value={value}>
+      {children}
+    </JobStoreContext.Provider>
+  );
 }
 
 export const useJobs = () => {
   const context = useContext(JobStoreContext);
-  if (!context) throw new Error("useJobs must be used inside JobStoreProvider");
+
+  if (!context) {
+    throw new Error("useJobs must be used inside JobStoreProvider");
+  }
+
   return context;
 };
 ```
@@ -1034,6 +1693,54 @@ export const seedJobs: Job[] = [
 ];
 ```
 
+## `lib/stockRepository.ts`
+
+```ts
+import { supabase } from "@/lib/supabase/client";
+
+export interface StockOption {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+}
+
+export async function getActiveStockOptions(): Promise<StockOption[]> {
+  const { data, error } = await supabase
+    .from("stock_options")
+    .select("id, name, description, is_active")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Failed to load stock options:", error);
+    throw new Error("Failed to load stock options");
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    isActive: row.is_active,
+  }));
+}
+```
+
+## `lib/supabase/client.ts`
+
+```ts
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabasePublishableKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+
+export const supabase = createClient(
+  supabaseUrl,
+  supabasePublishableKey
+);
+```
+
 ## `lib/types.ts`
 
 ```ts
@@ -1137,6 +1844,12 @@ export const fileToDataUrl = (file: File): Promise<string> =>
   });
 ```
 
+## `global.d.ts`
+
+```ts
+declare module "*.css";
+```
+
 ## `next-env.d.ts`
 
 ```ts
@@ -1169,6 +1882,7 @@ export default nextConfig;
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1"

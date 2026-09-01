@@ -12,14 +12,31 @@ export function AdminReviewActions({ job, actingAdmin }: { job: Job; actingAdmin
   const { reviewJob } = useJobs();
   const router = useRouter();
 
-  const perform = async (decision: "send-back" | "send-approval" | "approve") => {
+  const perform = async (
+    decision: "send-back" | "send-approval" | "approve"
+  ) => {
     setWorking(true);
-    const dataUrl = markup ? await fileToDataUrl(markup) : undefined;
-    reviewJob(job.id, actingAdmin, decision, comment, markup ? { filename: markup.name, dataUrl } : undefined);
-    setWorking(false);
-    router.push(actingAdmin === "Jack" ? "/admin/jack" : "/admin/raag");
+  
+    try {
+      const dataUrl = markup ? await fileToDataUrl(markup) : undefined;
+  
+      await reviewJob(
+        job.id,
+        actingAdmin,
+        decision,
+        comment,
+        markup ? { filename: markup.name, dataUrl } : undefined
+      );
+  
+      router.push(actingAdmin === "Jack" ? "/admin/jack" : "/admin/raag");
+    } catch (error) {
+      console.error("Failed to review job:", error);
+      alert("Failed to update the job. Check the console for details.");
+    } finally {
+      setWorking(false);
+    }
   };
-
+  
   return (
     <div className="card stack">
       <h2 className="section-title">Admin Action</h2>

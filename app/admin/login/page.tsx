@@ -13,5 +13,7 @@ export default function AdminLoginPage() {
     window.sessionStorage.setItem("pdm-admin-auth", "true");
     router.push("/admin");
   };
-  return <main><div className="card stack" style={{ maxWidth: 520, margin: "40px auto" }}><h1 style={{ margin: 0 }}>Admin Login</h1><div className="warning"><strong>Phase 1 mock only:</strong> use password <code>pdm-admin</code>. Replace this completely when real authentication is added.</div><form className="stack" onSubmit={submit}><div className="field"><label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>{error && <div className="warning">{error}</div>}<button className="btn btn-primary">Login</button></form></div></main>;
+  return <main><div className="card stack" style={{ maxWidth: 520, margin: "40px auto" }}><h1 style={{ margin: 0 }}>Admin Login</h1><div className="warning">
+  <strong>Temporary admin login:</strong> use password <code>pdm-admin</code>. This will be replaced when real authentication is added.
+</div><form className="stack" onSubmit={submit}><div className="field"><label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>{error && <div className="warning">{error}</div>}<button className="btn btn-primary">Login</button></form></div></main>;
 }

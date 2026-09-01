@@ -5,7 +5,7 @@ export function PdfViewer({ version }: { version?: DocumentVersion }) {
   return (
     <div className="pdf-panel">
       {version.dataUrl ? <iframe title={version.filename} src={version.dataUrl} /> : (
-        <div className="pdf-placeholder"><div><strong>{version.filename}</strong><br /><br />This seeded demo record has file metadata only. PDFs you upload during Phase 1 can be previewed here while they fit within browser localStorage limits.</div></div>
+        <div className="pdf-placeholder"><div><strong>{version.filename}</strong><br /><br />This file record currently contains metadata only. PDF storage will be connected to university cloud storage in a later phase.</div></div>
       )}
     </div>
   );

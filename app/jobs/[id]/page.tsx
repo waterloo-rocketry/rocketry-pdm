@@ -24,10 +24,22 @@ export default function JobPage() {
 
   const resubmit = async () => {
     if (!file) return;
+  
     setWorking(true);
-    const dataUrl = await fileToDataUrl(file);
-    resubmitJob(job.id, file.name, dataUrl, comment);
-    setWorking(false); setFile(null); setComment("");
+  
+    try {
+      const dataUrl = await fileToDataUrl(file);
+  
+      await resubmitJob(job.id, file.name, dataUrl, comment);
+  
+      setFile(null);
+      setComment("");
+    } catch (error) {
+      console.error("Failed to resubmit job:", error);
+      alert("Failed to resubmit job. Check the console for details.");
+    } finally {
+      setWorking(false);
+    }
   };
 
   return <main className="stack">
