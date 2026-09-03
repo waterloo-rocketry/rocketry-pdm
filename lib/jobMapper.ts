@@ -45,35 +45,41 @@ import type {
   }
   
   export function mapSupabaseJob(row: any): Job {
-    const versions: DocumentVersion[] = (row.job_documents ?? []).map(
-      (document: any) => ({
-        id: document.id,
-        version: document.version_number,
-        type: mapDocumentType(document.document_type),
-        uploadedBy: document.uploaded_by,
-        uploadedAt: document.uploaded_at,
-        filename: document.original_filename,
-      })
-    );
+    const versions: DocumentVersion[] = (row.job_documents ?? [])
+  .map((document: any) => ({
+    id: document.id,
+    version: document.version_number,
+    type: mapDocumentType(document.document_type),
+    uploadedBy: document.uploaded_by,
+    uploadedAt: document.uploaded_at,
+    filename: document.original_filename,
+  }))
+  .sort((a: DocumentVersion, b: DocumentVersion) => a.version - b.version);
   
-    const comments: CommentEntry[] = (row.job_comments ?? []).map(
-      (comment: any) => ({
-        id: comment.id,
-        author: comment.author,
-        role: mapRole(comment.author_role),
-        createdAt: comment.created_at,
-        comment: comment.comment,
-      })
-    );
+  const comments: CommentEntry[] = (row.job_comments ?? [])
+  .map((comment: any) => ({
+    id: comment.id,
+    author: comment.author,
+    role: mapRole(comment.author_role),
+    createdAt: comment.created_at,
+    comment: comment.comment,
+  }))
+  .sort(
+    (a: CommentEntry, b: CommentEntry) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
   
-    const workflow: WorkflowEvent[] = (row.job_history ?? []).map(
-      (event: any) => ({
-        id: event.id,
-        event: event.action,
-        actor: event.performed_by,
-        createdAt: event.created_at,
-      })
-    );
+  const workflow: WorkflowEvent[] = (row.job_history ?? [])
+  .map((event: any) => ({
+    id: event.id,
+    event: event.action,
+    actor: event.performed_by,
+    createdAt: event.created_at,
+  }))
+  .sort(
+    (a: WorkflowEvent, b: WorkflowEvent) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
   
     const originalComment =
       comments.find((comment) => comment.role === "User")?.comment ?? "";

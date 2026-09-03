@@ -88,25 +88,25 @@ export async function createJobInSupabase(
   }
 
   const { error: historyError } = await supabase
-    .from("job_history")
-    .insert([
-      {
-        job_id: jobRow.id,
-        previous_status: null,
-        new_status: "awaiting_check",
-        action: "Job created",
-        performed_by: "Engineering User",
-        performed_by_role: "user",
-      },
-      {
-        job_id: jobRow.id,
-        previous_status: null,
-        new_status: "awaiting_check",
-        action: "Submitted for check",
-        performed_by: "Engineering User",
-        performed_by_role: "user",
-      },
-    ]);
+  .from("job_history")
+  .insert([
+    {
+      job_id: jobRow.id,
+      previous_status: null,
+      new_status: "work_in_progress",
+      action: "Job created",
+      performed_by: "Engineering User",
+      performed_by_role: "user",
+    },
+    {
+      job_id: jobRow.id,
+      previous_status: "work_in_progress",
+      new_status: "awaiting_check",
+      action: "Submitted for check",
+      performed_by: "Engineering User",
+      performed_by_role: "user",
+    },
+  ]);
 
   if (historyError) {
     throw historyError;

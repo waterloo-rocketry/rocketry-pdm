@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import { seedJobs } from "./mockData";
+
 
 import { Job, NewJobInput, Person } from "./types";
 
@@ -60,22 +60,21 @@ export function JobStoreProvider({
     async function loadJobs() {
       try {
         const supabaseJobs = await getJobsFromSupabase();
-
-        if (supabaseJobs.length > 0) {
-          setJobs(supabaseJobs);
-        } else {
-          setJobs(seedJobs);
-        }
+  
+        setJobs(supabaseJobs);
       } catch (error) {
         console.error("Failed to load jobs from Supabase:", error);
-        setJobs(seedJobs);
+  
+        setJobs([]);
       } finally {
         setReady(true);
       }
     }
-
+  
     loadJobs();
   }, []);
+
+ 
 
   const createJob = async (input: NewJobInput): Promise<Job> => {
     const stockOption = await getActiveStockOptions();
