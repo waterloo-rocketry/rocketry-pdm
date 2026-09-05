@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { JobStoreProvider } from "@/lib/jobStore";
 
 export const metadata = {
-  title: "Engineering PDM",
+  title: "Waterloo Rocketry Manufacturing PDM",
   description: "Engineering PDM workflow system",
 };
 
