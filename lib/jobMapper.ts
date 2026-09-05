@@ -53,6 +53,8 @@ import type {
     uploadedBy: document.uploaded_by,
     uploadedAt: document.uploaded_at,
     filename: document.original_filename,
+storageProvider: document.storage_provider ?? undefined,
+storagePath: document.storage_path ?? undefined,
   }))
   .sort((a: DocumentVersion, b: DocumentVersion) => a.version - b.version);
   

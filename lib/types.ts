@@ -23,7 +23,8 @@ export interface DocumentVersion {
   uploadedBy: string;
   uploadedAt: string;
   filename: string;
-  dataUrl?: string;
+  storageProvider?: string;
+  storagePath?: string;
 }
 
 export interface CommentEntry {
@@ -67,6 +68,6 @@ export interface NewJobInput {
   originalComments: string;
   pdf: {
     filename: string;
-    dataUrl?: string;
+    file: File;
   };
 }

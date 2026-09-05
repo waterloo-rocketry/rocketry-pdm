@@ -4,7 +4,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useJobs } from "@/lib/jobStore";
-import { fileToDataUrl } from "@/lib/utils";
 import { Person } from "@/lib/types";
 import {
   getActiveStockOptions,
@@ -147,7 +146,6 @@ export default function NewJobPage() {
        * The PDF itself is not permanently stored yet.
        * Phase 4 will replace this with the storage-provider system.
        */
-      const dataUrl = await fileToDataUrl(pdf);
 
       await createJob({
         title: title.trim(),
@@ -158,7 +156,7 @@ export default function NewJobPage() {
         originalComments: comments.trim(),
         pdf: {
           filename: pdf.name,
-          dataUrl,
+          file: pdf,
         },
       });
 

@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-
+import { getStorageProvider } from "@/lib/storage";
 import { mapSupabaseJob } from "@/lib/jobMapper";
 
 import type { Job, NewJobInput, Person } from "@/lib/types";
@@ -59,20 +59,30 @@ export async function createJobInSupabase(
     throw jobError;
   }
 
-  const { error: documentError } = await supabase
-    .from("job_documents")
-    .insert({
-      job_id: jobRow.id,
-      version_number: 1,
-      document_type: "original_submission",
-      original_filename: input.pdf.filename,
-      storage_provider: "pending",
-      uploaded_by: "Engineering User",
-    });
+  const storage = getStorageProvider();
 
-  if (documentError) {
-    throw documentError;
-  }
+const storedFile = await storage.upload({
+  file: input.pdf.file,
+  jobId: jobRow.id,
+  filename: input.pdf.filename,
+});
+
+const { error: documentError } = await supabase
+  .from("job_documents")
+  .insert({
+    job_id: jobRow.id,
+    version_number: 1,
+    document_type: "original_submission",
+    original_filename: input.pdf.filename,
+    storage_provider: storedFile.provider,
+    storage_path: storedFile.path,
+    external_file_id: storedFile.externalFileId ?? null,
+    uploaded_by: "Engineering User",
+  });
+
+if (documentError) {
+  throw documentError;
+}
 
   const { error: commentError } = await supabase
     .from("job_comments")
@@ -117,6 +127,7 @@ export async function createJobInSupabase(
 
 export async function resubmitJobInSupabase(
   jobId: string,
+  file: File,
   filename: string,
   comment: string
 ): Promise<Job> {
@@ -148,16 +159,26 @@ export async function resubmitJobInSupabase(
 
   const nextVersion = (latestDocument?.version_number ?? 0) + 1;
 
-  const { error: documentError } = await supabase
-    .from("job_documents")
-    .insert({
-      job_id: existingJob.id,
-      version_number: nextVersion,
-      document_type: "user_revision",
-      original_filename: filename,
-      storage_provider: "pending",
-      uploaded_by: "Engineering User",
-    });
+const storage = getStorageProvider();
+
+const storedFile = await storage.upload({
+  file,
+  jobId: existingJob.id,
+  filename,
+});
+
+const { error: documentError } = await supabase
+  .from("job_documents")
+  .insert({
+    job_id: existingJob.id,
+    version_number: nextVersion,
+    document_type: "user_revision",
+    original_filename: filename,
+    storage_provider: storedFile.provider,
+    storage_path: storedFile.path,
+    external_file_id: storedFile.externalFileId ?? null,
+    uploaded_by: "Engineering User",
+  });
 
   if (documentError) {
     throw documentError;
@@ -223,7 +244,10 @@ export async function reviewJobInSupabase(
   admin: Person,
   decision: AdminDecision,
   comment: string,
-  markup?: { filename: string }
+  markup?: {
+    filename: string;
+    file: File;
+  }
 ): Promise<Job> {
   const { data: existingJob, error: jobLookupError } = await supabase
     .from("jobs")
@@ -285,13 +309,21 @@ export async function reviewJobInSupabase(
       .order("version_number", { ascending: false })
       .limit(1)
       .maybeSingle();
-
+  
     if (documentLookupError) {
       throw documentLookupError;
     }
-
+  
     const nextVersion = (latestDocument?.version_number ?? 0) + 1;
-
+  
+    const storage = getStorageProvider();
+  
+    const storedFile = await storage.upload({
+      file: markup.file,
+      jobId: existingJob.id,
+      filename: markup.filename,
+    });
+  
     const { error: markupError } = await supabase
       .from("job_documents")
       .insert({
@@ -301,10 +333,12 @@ export async function reviewJobInSupabase(
           ? "checker_markup"
           : "approver_markup",
         original_filename: markup.filename,
-        storage_provider: "pending",
+        storage_provider: storedFile.provider,
+        storage_path: storedFile.path,
+        external_file_id: storedFile.externalFileId ?? null,
         uploaded_by: admin,
       });
-
+  
     if (markupError) {
       throw markupError;
     }

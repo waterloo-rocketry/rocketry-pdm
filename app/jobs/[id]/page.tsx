@@ -9,7 +9,6 @@ import { PdfViewer } from "@/components/PdfViewer";
 import { CommentsList } from "@/components/CommentsList";
 import { VersionHistory } from "@/components/VersionHistory";
 import { WorkflowHistory } from "@/components/WorkflowHistory";
-import { fileToDataUrl } from "@/lib/utils";
 
 export default function JobPage() {
   const params = useParams<{ id: string }>();
@@ -28,9 +27,8 @@ export default function JobPage() {
     setWorking(true);
   
     try {
-      const dataUrl = await fileToDataUrl(file);
   
-      await resubmitJob(job.id, file.name, dataUrl, comment);
+      await resubmitJob(job.id, file, file.name, comment);
   
       setFile(null);
       setComment("");

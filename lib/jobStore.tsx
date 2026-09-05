@@ -1,12 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-
-
-import { Job, NewJobInput, Person } from "./types";
-
-import { uid } from "./utils";
+import type { Job, NewJobInput, Person } from "./types";
 
 import {
   createJobInSupabase,
@@ -28,8 +30,8 @@ interface JobStoreValue {
 
   resubmitJob: (
     id: string,
+    file: File,
     filename: string,
-    dataUrl: string | undefined,
     comment: string
   ) => Promise<Job>;
 
@@ -38,12 +40,16 @@ interface JobStoreValue {
     admin: Person,
     decision: AdminDecision,
     comment: string,
-    markup?: { filename: string; dataUrl?: string }
+    markup?: {
+      filename: string;
+      file: File;
+    }
   ) => Promise<Job>;
 
-  markComplete: (id: string, admin: Person) => Promise<Job>;
-
- 
+  markComplete: (
+    id: string,
+    admin: Person
+  ) => Promise<Job>;
 }
 
 const JobStoreContext = createContext<JobStoreValue | null>(null);
@@ -60,34 +66,37 @@ export function JobStoreProvider({
     async function loadJobs() {
       try {
         const supabaseJobs = await getJobsFromSupabase();
-  
         setJobs(supabaseJobs);
       } catch (error) {
         console.error("Failed to load jobs from Supabase:", error);
-  
         setJobs([]);
       } finally {
         setReady(true);
       }
     }
-  
+
     loadJobs();
   }, []);
 
- 
+  const createJob = async (
+    input: NewJobInput
+  ): Promise<Job> => {
+    const stockOptions = await getActiveStockOptions();
 
-  const createJob = async (input: NewJobInput): Promise<Job> => {
-    const stockOption = await getActiveStockOptions();
-
-    const matchingStock = stockOption.find(
+    const matchingStock = stockOptions.find(
       (option) => option.name === input.stock
     );
 
     if (!matchingStock) {
-      throw new Error("Selected stock option was not found.");
+      throw new Error(
+        "Selected stock option was not found."
+      );
     }
 
-    const job = await createJobInSupabase(input, matchingStock.id);
+    const job = await createJobInSupabase(
+      input,
+      matchingStock.id
+    );
 
     setJobs((current) => [job, ...current]);
 
@@ -96,24 +105,35 @@ export function JobStoreProvider({
 
   const resubmitJob = async (
     id: string,
+    file: File,
     filename: string,
-    dataUrl: string | undefined,
     comment: string
   ): Promise<Job> => {
-    const currentJob = jobs.find((job) => job.id === id);
-
-    if (!currentJob || currentJob.status !== "Work in Progress") {
-      throw new Error("Job is not available for resubmission.");
-    }
-
-    const updatedJob = await resubmitJobInSupabase(
-      id,
-      filename,
-      comment.trim()
+    const currentJob = jobs.find(
+      (job) => job.id === id
     );
 
+    if (
+      !currentJob ||
+      currentJob.status !== "Work in Progress"
+    ) {
+      throw new Error(
+        "Job is not available for resubmission."
+      );
+    }
+
+    const updatedJob =
+      await resubmitJobInSupabase(
+        id,
+        file,
+        filename,
+        comment.trim()
+      );
+
     setJobs((current) =>
-      current.map((job) => (job.id === id ? updatedJob : job))
+      current.map((job) =>
+        job.id === id ? updatedJob : job
+      )
     );
 
     return updatedJob;
@@ -124,9 +144,14 @@ export function JobStoreProvider({
     admin: Person,
     decision: AdminDecision,
     comment: string,
-    markup?: { filename: string; dataUrl?: string }
+    markup?: {
+      filename: string;
+      file: File;
+    }
   ): Promise<Job> => {
-    const currentJob = jobs.find((job) => job.id === id);
+    const currentJob = jobs.find(
+      (job) => job.id === id
+    );
 
     if (!currentJob) {
       throw new Error("Job was not found.");
@@ -136,23 +161,29 @@ export function JobStoreProvider({
       currentJob.status !== "Awaiting Check" &&
       currentJob.status !== "Awaiting Approval"
     ) {
-      throw new Error("Job is not available for review.");
+      throw new Error(
+        "Job is not available for review."
+      );
     }
 
-    const updatedJob = await reviewJobInSupabase(
-      id,
-      admin,
-      decision,
-      comment.trim(),
-      markup
-        ? {
-            filename: markup.filename,
-          }
-        : undefined
-    );
+    const updatedJob =
+      await reviewJobInSupabase(
+        id,
+        admin,
+        decision,
+        comment.trim(),
+        markup
+          ? {
+              filename: markup.filename,
+              file: markup.file,
+            }
+          : undefined
+      );
 
     setJobs((current) =>
-      current.map((job) => (job.id === id ? updatedJob : job))
+      current.map((job) =>
+        job.id === id ? updatedJob : job
+      )
     );
 
     return updatedJob;
@@ -162,22 +193,34 @@ export function JobStoreProvider({
     id: string,
     admin: Person
   ): Promise<Job> => {
-    const currentJob = jobs.find((job) => job.id === id);
-  
-    if (!currentJob || currentJob.status !== "Awaiting Manufacturing") {
-      throw new Error("Job is not available to be marked complete.");
-    }
-  
-    const updatedJob = await markCompleteInSupabase(id, admin);
-  
-    setJobs((current) =>
-      current.map((job) => (job.id === id ? updatedJob : job))
+    const currentJob = jobs.find(
+      (job) => job.id === id
     );
-  
+
+    if (
+      !currentJob ||
+      currentJob.status !==
+        "Awaiting Manufacturing"
+    ) {
+      throw new Error(
+        "Job is not available to be marked complete."
+      );
+    }
+
+    const updatedJob =
+      await markCompleteInSupabase(
+        id,
+        admin
+      );
+
+    setJobs((current) =>
+      current.map((job) =>
+        job.id === id ? updatedJob : job
+      )
+    );
+
     return updatedJob;
   };
-
-  
 
   const value = useMemo(
     () => ({
@@ -202,7 +245,9 @@ export const useJobs = () => {
   const context = useContext(JobStoreContext);
 
   if (!context) {
-    throw new Error("useJobs must be used inside JobStoreProvider");
+    throw new Error(
+      "useJobs must be used inside JobStoreProvider"
+    );
   }
 
   return context;

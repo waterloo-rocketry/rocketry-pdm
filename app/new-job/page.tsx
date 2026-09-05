@@ -2,7 +2,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useJobs } from "@/lib/jobStore";
-import { fileToDataUrl } from "@/lib/utils";
 import { Person } from "@/lib/types";
 import {
   getActiveStockOptions,
@@ -46,7 +45,6 @@ export default function NewJobPage() {
     e.preventDefault();
     if (!complete || !pdf) return;
     setWorking(true);
-    const dataUrl = await fileToDataUrl(pdf);
     await createJob({
       title: title.trim(),
       stock,
@@ -56,8 +54,8 @@ export default function NewJobPage() {
       originalComments: comments.trim(),
       pdf: {
         filename: pdf.name,
-        dataUrl
-      }
+        file: pdf,
+      },
     });
     router.push("/jobs");
 };
