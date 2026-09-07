@@ -247,8 +247,9 @@ export async function reviewJobInSupabase(
   markup?: {
     filename: string;
     file: File;
-  }
-): Promise<Job> {
+  },
+  machinist?: string
+): Promise<Job>  {
   const { data: existingJob, error: jobLookupError } = await supabase
     .from("jobs")
     .select("id, status")
@@ -279,6 +280,10 @@ export async function reviewJobInSupabase(
     action = "Checker passed";
     role = "checker";
   } else if (decision === "approve" && isApprovalStage) {
+    if (!machinist?.trim()) {
+      throw new Error("A machinist must be assigned before manufacturing.");
+    }
+  
     newStatus = "awaiting_manufacturing";
     action = "Approved for manufacturing";
     role = "approver";
@@ -379,12 +384,15 @@ export async function reviewJobInSupabase(
   }
 
   const { error: updateError } = await supabase
-    .from("jobs")
-    .update({
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", existingJob.id);
+  .from("jobs")
+  .update({
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+    ...(decision === "approve" && isApprovalStage
+      ? { machinist: machinist!.trim() }
+      : {}),
+  })
+  .eq("id", existingJob.id);
 
   if (updateError) {
     throw updateError;

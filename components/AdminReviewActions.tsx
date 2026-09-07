@@ -13,6 +13,7 @@ export function AdminReviewActions({
   actingAdmin: Person;
 }) {
   const [comment, setComment] = useState("");
+  const [machinist, setMachinist] = useState("");
   const [markup, setMarkup] = useState<File | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -35,7 +36,8 @@ export function AdminReviewActions({
               filename: markup.name,
               file: markup,
             }
-          : undefined
+          : undefined,
+        decision === "approve" ? machinist : undefined
       );
 
       router.push(
@@ -97,25 +99,37 @@ export function AdminReviewActions({
         </div>
       )}
 
-      {job.status === "Awaiting Approval" && (
-        <div className="button-row">
-          <button
-            className="btn btn-danger"
-            disabled={working}
-            onClick={() => perform("send-back")}
-          >
-            Send Back to WIP
-          </button>
+{job.status === "Awaiting Approval" && (
+  <>
+    <div className="field">
+      <label>Machinist</label>
+      <input
+        type="text"
+        value={machinist}
+        onChange={(e) => setMachinist(e.target.value)}
+        placeholder="Enter machinist name"
+      />
+    </div>
 
-          <button
-            className="btn btn-success"
-            disabled={working}
-            onClick={() => perform("approve")}
-          >
-            Approve for Manufacturing
-          </button>
-        </div>
-      )}
+    <div className="button-row">
+      <button
+        className="btn btn-danger"
+        disabled={working}
+        onClick={() => perform("send-back")}
+      >
+        Send Back to WIP
+      </button>
+
+      <button
+        className="btn btn-success"
+        disabled={working || !machinist.trim()}
+        onClick={() => perform("approve")}
+      >
+        Approve for Manufacturing
+      </button>
+    </div>
+  </>
+)}
     </div>
   );
 }

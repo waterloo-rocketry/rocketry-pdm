@@ -43,7 +43,8 @@ interface JobStoreValue {
     markup?: {
       filename: string;
       file: File;
-    }
+    },
+    machinist?: string
   ) => Promise<Job>;
 
   markComplete: (
@@ -147,7 +148,8 @@ export function JobStoreProvider({
     markup?: {
       filename: string;
       file: File;
-    }
+    },
+    machinist?: string
   ): Promise<Job> => {
     const currentJob = jobs.find(
       (job) => job.id === id
@@ -165,20 +167,21 @@ export function JobStoreProvider({
         "Job is not available for review."
       );
     }
-
+    
     const updatedJob =
-      await reviewJobInSupabase(
-        id,
-        admin,
-        decision,
-        comment.trim(),
-        markup
-          ? {
-              filename: markup.filename,
-              file: markup.file,
-            }
-          : undefined
-      );
+    await reviewJobInSupabase(
+      id,
+      admin,
+      decision,
+      comment.trim(),
+      markup
+        ? {
+            filename: markup.filename,
+            file: markup.file,
+          }
+        : undefined,
+      machinist?.trim()
+    );
 
     setJobs((current) =>
       current.map((job) =>

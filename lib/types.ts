@@ -57,6 +57,7 @@ export interface Job {
   workflow: WorkflowEvent[];
   completedAt?: string;
   completedBy?: Person;
+  machinist?: string;
 }
 
 export interface NewJobInput {
