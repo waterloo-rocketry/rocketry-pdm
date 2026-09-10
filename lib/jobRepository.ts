@@ -216,14 +216,15 @@ export async function resubmitJobInSupabase(
     }
   }
 
-  const { error: updateError } = await supabase
-    .from("jobs")
-    .update({
-      status: "awaiting_check",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", existingJob.id);
+  console.log("Resubmitting job number:", jobId);
 
+  const { error: updateError } = await supabase.rpc(
+    "resubmit_job",
+    {
+      p_job_number: jobId,
+    }
+  );
+  
   if (updateError) {
     throw updateError;
   }

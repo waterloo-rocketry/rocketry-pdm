@@ -45,13 +45,13 @@ export async function moveJobToFolder(
   jobId: string,
   folderId: string | null
 ): Promise<void> {
-  const { error } = await supabase
-    .from("jobs")
-    .update({
-      folder_id: folderId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("job_number", jobId);
+  const { error } = await supabase.rpc(
+    "move_job_to_folder",
+    {
+      p_job_number: jobId,
+      p_folder_id: folderId,
+    }
+  );
 
   if (error) {
     throw error;
