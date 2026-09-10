@@ -42,6 +42,7 @@ export async function createJobInSupabase(
     .insert({
       title: input.title,
       stock_id: stockId,
+      stock_ordering: input.stockOrdering,
       desired_completion_date: input.desiredCompletionDate,
       checker: input.checker,
       approver: input.approver,
@@ -61,28 +62,36 @@ export async function createJobInSupabase(
 
   const storage = getStorageProvider();
 
-const storedFile = await storage.upload({
-  file: input.pdf.file,
-  jobId: jobRow.id,
-  filename: input.pdf.filename,
-});
+  const uploadedDocuments = [];
 
-const { error: documentError } = await supabase
-  .from("job_documents")
-  .insert({
-    job_id: jobRow.id,
-    version_number: 1,
-    document_type: "original_submission",
-    original_filename: input.pdf.filename,
-    storage_provider: storedFile.provider,
-    storage_path: storedFile.path,
-    external_file_id: storedFile.externalFileId ?? null,
-    uploaded_by: "Engineering User",
-  });
+  for (let i = 0; i < input.pdfs.length; i++) {
+    const pdf = input.pdfs[i];
 
-if (documentError) {
-  throw documentError;
-}
+    const storedFile = await storage.upload({
+      file: pdf.file,
+      jobId: jobRow.id,
+      filename: pdf.filename,
+    });
+
+    uploadedDocuments.push({
+      job_id: jobRow.id,
+      version_number: 1,
+      document_type: "original_submission",
+      original_filename: pdf.filename,
+      storage_provider: storedFile.provider,
+      storage_path: storedFile.path,
+      external_file_id: storedFile.externalFileId ?? null,
+      uploaded_by: "Engineering User",
+    });
+  }
+
+  const { error: documentError } = await supabase
+    .from("job_documents")
+    .insert(uploadedDocuments);
+
+  if (documentError) {
+    throw documentError;
+  }
 
   const { error: commentError } = await supabase
     .from("job_comments")
@@ -98,25 +107,25 @@ if (documentError) {
   }
 
   const { error: historyError } = await supabase
-  .from("job_history")
-  .insert([
-    {
-      job_id: jobRow.id,
-      previous_status: null,
-      new_status: "work_in_progress",
-      action: "Job created",
-      performed_by: "Engineering User",
-      performed_by_role: "user",
-    },
-    {
-      job_id: jobRow.id,
-      previous_status: "work_in_progress",
-      new_status: "awaiting_check",
-      action: "Submitted for check",
-      performed_by: "Engineering User",
-      performed_by_role: "user",
-    },
-  ]);
+    .from("job_history")
+    .insert([
+      {
+        job_id: jobRow.id,
+        previous_status: null,
+        new_status: "work_in_progress",
+        action: "Job created",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+      {
+        job_id: jobRow.id,
+        previous_status: "work_in_progress",
+        new_status: "awaiting_check",
+        action: "Submitted for check",
+        performed_by: "Engineering User",
+        performed_by_role: "user",
+      },
+    ]);
 
   if (historyError) {
     throw historyError;
@@ -127,8 +136,10 @@ if (documentError) {
 
 export async function resubmitJobInSupabase(
   jobId: string,
-  file: File,
-  filename: string,
+  files: {
+    filename: string;
+    file: File;
+  }[],
   comment: string
 ): Promise<Job> {
   const { data: existingJob, error: jobLookupError } = await supabase
@@ -159,26 +170,32 @@ export async function resubmitJobInSupabase(
 
   const nextVersion = (latestDocument?.version_number ?? 0) + 1;
 
-const storage = getStorageProvider();
+  const storage = getStorageProvider();
 
-const storedFile = await storage.upload({
-  file,
-  jobId: existingJob.id,
-  filename,
-});
+  const revisedDocuments = [];
 
-const { error: documentError } = await supabase
-  .from("job_documents")
-  .insert({
-    job_id: existingJob.id,
-    version_number: nextVersion,
-    document_type: "user_revision",
-    original_filename: filename,
-    storage_provider: storedFile.provider,
-    storage_path: storedFile.path,
-    external_file_id: storedFile.externalFileId ?? null,
-    uploaded_by: "Engineering User",
-  });
+  for (const file of files) {
+    const storedFile = await storage.upload({
+      file: file.file,
+      jobId: existingJob.id,
+      filename: file.filename,
+    });
+
+    revisedDocuments.push({
+      job_id: existingJob.id,
+      version_number: nextVersion,
+      document_type: "user_revision",
+      original_filename: file.filename,
+      storage_provider: storedFile.provider,
+      storage_path: storedFile.path,
+      external_file_id: storedFile.externalFileId ?? null,
+      uploaded_by: "Engineering User",
+    });
+  }
+
+  const { error: documentError } = await supabase
+    .from("job_documents")
+    .insert(revisedDocuments);
 
   if (documentError) {
     throw documentError;
@@ -218,7 +235,7 @@ const { error: documentError } = await supabase
         job_id: existingJob.id,
         previous_status: "work_in_progress",
         new_status: "work_in_progress",
-        action: "Revised drawing uploaded",
+        action: "Revised drawing package uploaded",
         performed_by: "Engineering User",
         performed_by_role: "user",
       },
@@ -244,12 +261,12 @@ export async function reviewJobInSupabase(
   admin: Person,
   decision: AdminDecision,
   comment: string,
-  markup?: {
+  markups?: {
     filename: string;
     file: File;
-  },
+  }[],
   machinist?: string
-): Promise<Job>  {
+): Promise<Job> {
   const { data: existingJob, error: jobLookupError } = await supabase
     .from("jobs")
     .select("id, status")
@@ -306,43 +323,57 @@ export async function reviewJobInSupabase(
     }
   }
 
-  if (markup) {
-    const { data: latestDocument, error: documentLookupError } = await supabase
-      .from("job_documents")
-      .select("version_number")
-      .eq("job_id", existingJob.id)
-      .order("version_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  if (markups && markups.length > 0) {
+    const { data: latestDocument, error: documentLookupError } =
+      await supabase
+        .from("job_documents")
+        .select("version_number")
+        .eq("job_id", existingJob.id)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
   
     if (documentLookupError) {
       throw documentLookupError;
     }
   
-    const nextVersion = (latestDocument?.version_number ?? 0) + 1;
+    const nextVersion =
+      (latestDocument?.version_number ?? 0) + 1;
   
     const storage = getStorageProvider();
   
-    const storedFile = await storage.upload({
-      file: markup.file,
-      jobId: existingJob.id,
-      filename: markup.filename,
-    });
+    const markupDocuments = [];
   
-    const { error: markupError } = await supabase
-      .from("job_documents")
-      .insert({
+    for (const markup of markups) {
+      const storedFile = await storage.upload({
+        file: markup.file,
+        jobId: existingJob.id,
+        filename: markup.filename,
+      });
+  
+      markupDocuments.push({
         job_id: existingJob.id,
+  
+        // All markups uploaded together belong
+        // to the same document package/version.
         version_number: nextVersion,
+  
         document_type: isCheckerStage
           ? "checker_markup"
           : "approver_markup",
+  
         original_filename: markup.filename,
         storage_provider: storedFile.provider,
         storage_path: storedFile.path,
-        external_file_id: storedFile.externalFileId ?? null,
+        external_file_id:
+          storedFile.externalFileId ?? null,
         uploaded_by: admin,
       });
+    }
+  
+    const { error: markupError } = await supabase
+      .from("job_documents")
+      .insert(markupDocuments);
   
     if (markupError) {
       throw markupError;
@@ -350,35 +381,54 @@ export async function reviewJobInSupabase(
   }
 
   if (decision === "approve" && isApprovalStage) {
-    const { data: latestDocument, error: documentLookupError } = await supabase
+    const { data: latestVersionRow, error: versionLookupError } = await supabase
       .from("job_documents")
-      .select("*")
+      .select("version_number")
       .eq("job_id", existingJob.id)
       .order("version_number", { ascending: false })
       .limit(1)
       .maybeSingle();
-
-    if (documentLookupError) {
-      throw documentLookupError;
+  
+    if (versionLookupError) {
+      throw versionLookupError;
     }
-
-    if (latestDocument) {
-      const { error: finalDocumentError } = await supabase
-        .from("job_documents")
-        .insert({
+  
+    if (latestVersionRow) {
+      const latestVersion = latestVersionRow.version_number;
+  
+      const { data: latestDocuments, error: documentLookupError } =
+        await supabase
+          .from("job_documents")
+          .select("*")
+          .eq("job_id", existingJob.id)
+          .eq("version_number", latestVersion);
+  
+      if (documentLookupError) {
+        throw documentLookupError;
+      }
+  
+      if (latestDocuments && latestDocuments.length > 0) {
+        const finalVersion = latestVersion + 1;
+  
+        const finalDocuments = latestDocuments.map((document) => ({
           job_id: existingJob.id,
-          version_number: latestDocument.version_number + 1,
+          version_number: finalVersion,
           document_type: "final_approved",
-          original_filename: latestDocument.original_filename,
-          storage_provider: latestDocument.storage_provider,
-          external_file_id: latestDocument.external_file_id,
-          storage_path: latestDocument.storage_path,
+          original_filename: document.original_filename,
+          storage_provider: document.storage_provider,
+          external_file_id: document.external_file_id,
+          storage_path: document.storage_path,
           uploaded_by: admin,
-          metadata: latestDocument.metadata,
-        });
-
-      if (finalDocumentError) {
-        throw finalDocumentError;
+          metadata: document.metadata,
+        }));
+  
+        const { error: finalDocumentError } = await supabase
+          .from("job_documents")
+          .insert(finalDocuments);
+  
+        if (finalDocumentError) {
+          throw finalDocumentError;
+        }
       }
     }
   }

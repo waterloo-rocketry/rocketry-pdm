@@ -8,7 +8,19 @@ import {
   useState,
 } from "react";
 
-import type { Job, NewJobInput, Person } from "./types";
+import type {
+  Job,
+  NewJobInput,
+  Person,
+  ProjectFolder,
+} from "./types";
+
+import {
+  getProjectFolders,
+  createProjectFolder,
+  moveJobToFolder,
+  deleteProjectFolder,
+} from "./folderRepository";
 
 import {
   createJobInSupabase,
@@ -24,14 +36,19 @@ type AdminDecision = "send-back" | "send-approval" | "approve";
 
 interface JobStoreValue {
   jobs: Job[];
+  folders: ProjectFolder[];
   ready: boolean;
 
-  createJob: (input: NewJobInput) => Promise<Job>;
+  createJob: (
+    input: NewJobInput
+  ) => Promise<Job>;
 
   resubmitJob: (
     id: string,
-    file: File,
-    filename: string,
+    files: {
+      filename: string;
+      file: File;
+    }[],
     comment: string
   ) => Promise<Job>;
 
@@ -40,10 +57,10 @@ interface JobStoreValue {
     admin: Person,
     decision: AdminDecision,
     comment: string,
-    markup?: {
+    markups?: {
       filename: string;
       file: File;
-    },
+    }[],
     machinist?: string
   ) => Promise<Job>;
 
@@ -51,9 +68,23 @@ interface JobStoreValue {
     id: string,
     admin: Person
   ) => Promise<Job>;
+
+  createFolder: (
+    name: string
+  ) => Promise<ProjectFolder>;
+
+  moveJob: (
+    jobId: string,
+    folderId: string | null
+  ) => Promise<void>;
+
+  deleteFolder: (
+    folderId: string
+  ) => Promise<void>;
 }
 
-const JobStoreContext = createContext<JobStoreValue | null>(null);
+const JobStoreContext =
+  createContext<JobStoreValue | null>(null);
 
 export function JobStoreProvider({
   children,
@@ -61,28 +92,42 @@ export function JobStoreProvider({
   children: React.ReactNode;
 }) {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [folders, setFolders] =
+    useState<ProjectFolder[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    async function loadJobs() {
+    async function loadData() {
       try {
-        const supabaseJobs = await getJobsFromSupabase();
+        const [supabaseJobs, projectFolders] =
+          await Promise.all([
+            getJobsFromSupabase(),
+            getProjectFolders(),
+          ]);
+
         setJobs(supabaseJobs);
+        setFolders(projectFolders);
       } catch (error) {
-        console.error("Failed to load jobs from Supabase:", error);
+        console.error(
+          "Failed to load PDM data from Supabase:",
+          error
+        );
+
         setJobs([]);
+        setFolders([]);
       } finally {
         setReady(true);
       }
     }
 
-    loadJobs();
+    loadData();
   }, []);
 
   const createJob = async (
     input: NewJobInput
   ): Promise<Job> => {
-    const stockOptions = await getActiveStockOptions();
+    const stockOptions =
+      await getActiveStockOptions();
 
     const matchingStock = stockOptions.find(
       (option) => option.name === input.stock
@@ -106,8 +151,10 @@ export function JobStoreProvider({
 
   const resubmitJob = async (
     id: string,
-    file: File,
-    filename: string,
+    files: {
+      filename: string;
+      file: File;
+    }[],
     comment: string
   ): Promise<Job> => {
     const currentJob = jobs.find(
@@ -126,8 +173,7 @@ export function JobStoreProvider({
     const updatedJob =
       await resubmitJobInSupabase(
         id,
-        file,
-        filename,
+        files,
         comment.trim()
       );
 
@@ -145,10 +191,10 @@ export function JobStoreProvider({
     admin: Person,
     decision: AdminDecision,
     comment: string,
-    markup?: {
+    markups?: {
       filename: string;
       file: File;
-    },
+    }[],
     machinist?: string
   ): Promise<Job> => {
     const currentJob = jobs.find(
@@ -167,21 +213,16 @@ export function JobStoreProvider({
         "Job is not available for review."
       );
     }
-    
+
     const updatedJob =
-    await reviewJobInSupabase(
-      id,
-      admin,
-      decision,
-      comment.trim(),
-      markup
-        ? {
-            filename: markup.filename,
-            file: markup.file,
-          }
-        : undefined,
-      machinist?.trim()
-    );
+      await reviewJobInSupabase(
+        id,
+        admin,
+        decision,
+        comment.trim(),
+        markups,
+        machinist?.trim()
+      );
 
     setJobs((current) =>
       current.map((job) =>
@@ -225,27 +266,96 @@ export function JobStoreProvider({
     return updatedJob;
   };
 
+  const createFolder = async (
+    name: string
+  ): Promise<ProjectFolder> => {
+    const folder =
+      await createProjectFolder(name);
+
+    setFolders((current) => [
+      ...current,
+      folder,
+    ]);
+
+    return folder;
+  };
+
+  const moveJob = async (
+    jobId: string,
+    folderId: string | null
+  ): Promise<void> => {
+    await moveJobToFolder(
+      jobId,
+      folderId
+    );
+
+    setJobs((current) =>
+      current.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              folderId:
+                folderId ?? undefined,
+            }
+          : job
+      )
+    );
+  };
+
+  const deleteFolder = async (
+    folderId: string
+  ): Promise<void> => {
+    await deleteProjectFolder(
+      folderId
+    );
+
+    setFolders((current) =>
+      current.filter(
+        (folder) =>
+          folder.id !== folderId
+      )
+    );
+
+    setJobs((current) =>
+      current.map((job) =>
+        job.folderId === folderId
+          ? {
+              ...job,
+              folderId: undefined,
+            }
+          : job
+      )
+    );
+  };
+
   const value = useMemo(
     () => ({
       jobs,
+      folders,
       ready,
       createJob,
       resubmitJob,
       reviewJob,
       markComplete,
+      createFolder,
+      moveJob,
+      deleteFolder,
     }),
-    [jobs, ready]
+    [jobs, folders, ready]
   );
 
   return (
-    <JobStoreContext.Provider value={value}>
+    <JobStoreContext.Provider
+      value={value}
+    >
       {children}
     </JobStoreContext.Provider>
   );
 }
 
 export const useJobs = () => {
-  const context = useContext(JobStoreContext);
+  const context =
+    useContext(JobStoreContext);
 
   if (!context) {
     throw new Error(

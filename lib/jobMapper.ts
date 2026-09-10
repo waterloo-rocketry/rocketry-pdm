@@ -86,11 +86,13 @@ storagePath: document.storage_path ?? undefined,
     const originalComment =
       comments.find((comment) => comment.role === "User")?.comment ?? "";
   
-    return {
+     return {
       id: String(row.job_number),
       title: row.title,
       status: mapJobStatus(row.status),
       stock: row.stock_options?.name ?? "Unknown",
+      stockOrdering: row.stock_ordering ?? undefined,
+      folderId: row.folder_id ?? undefined,
       desiredCompletionDate: row.desired_completion_date,
       checker: row.checker,
       approver: row.approver,

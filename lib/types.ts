@@ -16,6 +16,14 @@ export type DocumentType =
 
 export type Role = "User" | "Checker" | "Approver" | "Admin" | "Manufacturing";
 
+export type StockOrdering = "admins_order" | "self_order";
+
+export type ProjectFolder = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
 export interface DocumentVersion {
   id: string;
   version: number;
@@ -47,6 +55,8 @@ export interface Job {
   title: string;
   status: JobStatus;
   stock: string;
+  stockOrdering?: StockOrdering;
+  folderId?: string;
   desiredCompletionDate: string;
   checker: Person;
   approver: Person;
@@ -63,12 +73,13 @@ export interface Job {
 export interface NewJobInput {
   title: string;
   stock: string;
+  stockOrdering: StockOrdering;
   desiredCompletionDate: string;
   checker: Person;
   approver: Person;
   originalComments: string;
-  pdf: {
+  pdfs: {
     filename: string;
     file: File;
-  };
+  }[];
 }
