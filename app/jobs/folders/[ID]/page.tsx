@@ -9,7 +9,11 @@ import { Loading } from "@/components/Loading";
 import { useJobs } from "@/lib/jobStore";
 
 export default function FolderPage() {
-  const params = useParams<{ id: string }>();
+  const params = useParams();
+
+const folderId = String(
+  params.id ?? params.ID ?? ""
+);
 
   const {
     jobs,
@@ -19,15 +23,15 @@ export default function FolderPage() {
   } = useJobs();
 
   const folder = folders.find(
-    (folder) => folder.id === params.id
+    (folder) => folder.id === folderId
   );
 
   const folderJobs = useMemo(
     () =>
       jobs.filter(
-        (job) => job.folderId === params.id
+        (job) => job.folderId === folderId
       ),
-    [jobs, params.id]
+    [jobs, folderId]
   );
 
   const handleMoveJob = async (
