@@ -5,12 +5,16 @@ export interface StockOption {
   name: string;
   description: string | null;
   isActive: boolean;
+  material: string | null;
+  form: string | null;
 }
 
 export async function getActiveStockOptions(): Promise<StockOption[]> {
   const { data, error } = await supabase
     .from("stock_options")
-    .select("id, name, description, is_active")
+    .select(
+      "id, name, description, is_active, material, form"
+    )
     .eq("is_active", true)
     .order("name", { ascending: true });
 
@@ -24,5 +28,7 @@ export async function getActiveStockOptions(): Promise<StockOption[]> {
     name: row.name,
     description: row.description,
     isActive: row.is_active,
+    material: row.material,
+    form: row.form,
   }));
 }

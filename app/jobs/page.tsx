@@ -14,7 +14,6 @@ export default function JobsPage() {
     folders,
     ready,
     createFolder,
-    moveJob,
     deleteFolder,
   } = useJobs();
 
@@ -60,21 +59,6 @@ export default function JobsPage() {
     }
   };
 
-  const handleMoveJob = async (
-    jobId: string,
-    folderId: string
-  ) => {
-    try {
-      await moveJob(
-        jobId,
-        folderId === "" ? null : folderId
-      );
-    } catch (error) {
-      console.error("Failed to move job:", error);
-      alert("Failed to move job.");
-    }
-  };
-
   const handleDeleteFolder = async (
     folderId: string,
     folderName: string
@@ -106,9 +90,10 @@ export default function JobsPage() {
       <div className="page-heading">
         <div>
           <h1>Existing Jobs</h1>
+
           <p>
-            Browse project folders or view jobs that have not
-            been placed into a folder.
+            Browse project folders or view jobs that have not been placed into
+            a folder.
           </p>
         </div>
       </div>
@@ -148,10 +133,14 @@ export default function JobsPage() {
                   href={`/jobs/folders/${folder.id}`}
                   className="folder-link"
                 >
-                  <span className="folder-icon">📁</span>
+                  <span className="folder-icon">
+                    📁
+                  </span>
 
                   <div>
-                    <strong>{folder.name}</strong>
+                    <strong>
+                      {folder.name}
+                    </strong>
 
                     <div className="help">
                       {getFolderJobCount(folder.id)} job
@@ -182,48 +171,16 @@ export default function JobsPage() {
       </div>
 
       <div className="card stack">
-        <h2 className="section-title">Unfiled Jobs</h2>
+        <h2 className="section-title">
+          Unfiled Jobs
+        </h2>
 
         {unfiledJobs.length === 0 ? (
-          <p>All jobs are currently stored in project folders.</p>
+          <p>
+            All jobs are currently stored in project folders.
+          </p>
         ) : (
-          <>
-            <JobsTable jobs={unfiledJobs} />
-
-            <div className="stack">
-              {unfiledJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="button-row"
-                >
-                  <strong>{job.title}</strong>
-
-                  <select
-                    value=""
-                    onChange={(e) =>
-                      handleMoveJob(
-                        job.id,
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">
-                      Move to folder...
-                    </option>
-
-                    {folders.map((folder) => (
-                      <option
-                        key={folder.id}
-                        value={folder.id}
-                      >
-                        {folder.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </>
+          <JobsTable jobs={unfiledJobs} />
         )}
       </div>
     </main>

@@ -21,6 +21,9 @@ export default function NewJobPage() {
   const [title, setTitle] = useState("");
   const [pdfs, setPdfs] = useState<File[]>([]);
   const [comments, setComments] = useState("");
+
+  const [material, setMaterial] = useState("");
+  const [form, setForm] = useState("");
   const [stock, setStock] = useState("");
 
   const [stockOrdering, setStockOrdering] =
@@ -45,12 +48,45 @@ export default function NewJobPage() {
     loadStockOptions();
   }, []);
 
+  const materials = useMemo(() => {
+  return Array.from(
+    new Set(
+      stockOptions
+        .map((option) => option.material?.trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  ).sort();
+}, [stockOptions]);
+
+const forms = useMemo(() => {
+  return Array.from(
+    new Set(
+      stockOptions
+        .filter(
+          (option) => option.material?.trim() === material
+        )
+        .map((option) => option.form?.trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  ).sort();
+}, [stockOptions, material]);
+
+const filteredStockOptions = useMemo(() => {
+  return stockOptions.filter(
+    (option) =>
+      option.material?.trim() === material &&
+      option.form?.trim() === form
+  );
+}, [stockOptions, material, form]);
+
   const complete = useMemo(
     () =>
       Boolean(
         title.trim() &&
           pdfs.length > 0 &&
           comments.trim() &&
+          material &&
+          form &&
           stock &&
           stockOrdering &&
           date &&
@@ -62,6 +98,8 @@ export default function NewJobPage() {
       title,
       pdfs,
       comments,
+      material,
+      form,
       stock,
       stockOrdering,
       date,
@@ -87,21 +125,27 @@ export default function NewJobPage() {
 
     setWorking(true);
 
-    await createJob({
-      title: title.trim(),
-      stock,
-      stockOrdering,
-      desiredCompletionDate: date,
-      checker,
-      approver,
-      originalComments: comments.trim(),
-      pdfs: pdfs.map((pdf) => ({
-        filename: pdf.name,
-        file: pdf,
-      })),
-    });
+    try {
+      await createJob({
+        title: title.trim(),
+        stock,
+        stockOrdering,
+        desiredCompletionDate: date,
+        checker,
+        approver,
+        originalComments: comments.trim(),
+        pdfs: pdfs.map((pdf) => ({
+          filename: pdf.name,
+          file: pdf,
+        })),
+      });
 
-    router.push("/jobs");
+      router.push("/jobs");
+    } catch (error) {
+      console.error("Failed to create job:", error);
+      alert("Failed to create job. Check the console for details.");
+      setWorking(false);
+    }
   };
 
   return (
@@ -146,6 +190,7 @@ export default function NewJobPage() {
               {pdfs.length > 0 && (
                 <div className="help">
                   {pdfs.length} PDF{pdfs.length === 1 ? "" : "s"} selected:
+
                   <ul>
                     {pdfs.map((pdf) => (
                       <li key={`${pdf.name}-${pdf.lastModified}`}>
@@ -170,22 +215,76 @@ export default function NewJobPage() {
 
           <div className="grid-3">
             <div className="field">
-              <label>Stock Selection</label>
+              <label>Material</label>
 
               <select
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                value={material}
+                onChange={(e) => {
+                  setMaterial(e.target.value);
+                  setForm("");
+                  setStock("");
+                }}
               >
-                <option value="">Select stock…</option>
+                <option value="">Select material…</option>
 
-                {stockOptions.map((option) => (
-                  <option key={option.id} value={option.name}>
-                    {option.name}
+                {materials.map((materialOption) => (
+                  <option
+                    key={materialOption}
+                    value={materialOption}
+                  >
+                    {materialOption}
                   </option>
                 ))}
               </select>
             </div>
 
+            <div className="field">
+              <label>Form</label>
+
+              <select
+                value={form}
+                disabled={!material}
+                onChange={(e) => {
+                  setForm(e.target.value);
+                  setStock("");
+                }}
+              >
+                <option value="">Select form…</option>
+
+                {forms.map((formOption) => (
+                  <option
+                    key={formOption}
+                    value={formOption}
+                  >
+                    {formOption}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Stock Size</label>
+
+              <select
+                value={stock}
+                disabled={!material || !form}
+                onChange={(e) => setStock(e.target.value)}
+              >
+                <option value="">Select stock…</option>
+
+                {filteredStockOptions.map((option) => (
+                  <option
+                    key={option.id}
+                    value={option.name}
+                  >
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid-3">
             <div className="field">
               <label>Desired Completion Date</label>
 
@@ -196,6 +295,7 @@ export default function NewJobPage() {
               />
             </div>
 
+            <div />
             <div />
           </div>
 

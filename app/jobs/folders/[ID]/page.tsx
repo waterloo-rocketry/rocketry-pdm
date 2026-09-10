@@ -11,15 +11,14 @@ import { useJobs } from "@/lib/jobStore";
 export default function FolderPage() {
   const params = useParams();
 
-const folderId = String(
-  params.id ?? params.ID ?? ""
-);
+  const folderId = String(
+    params.id ?? params.ID ?? ""
+  );
 
   const {
     jobs,
     folders,
     ready,
-    moveJob,
   } = useJobs();
 
   const folder = folders.find(
@@ -33,21 +32,6 @@ const folderId = String(
       ),
     [jobs, folderId]
   );
-
-  const handleMoveJob = async (
-    jobId: string,
-    folderId: string
-  ) => {
-    try {
-      await moveJob(
-        jobId,
-        folderId === "" ? null : folderId
-      );
-    } catch (error) {
-      console.error("Failed to move job:", error);
-      alert("Failed to move job.");
-    }
-  };
 
   if (!ready) {
     return (
@@ -94,43 +78,7 @@ const folderId = String(
         {folderJobs.length === 0 ? (
           <p>This folder is empty.</p>
         ) : (
-          <>
-            <JobsTable jobs={folderJobs} />
-
-            <div className="stack">
-              {folderJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="button-row"
-                >
-                  <strong>{job.title}</strong>
-
-                  <select
-                    value={job.folderId ?? ""}
-                    onChange={(e) =>
-                      handleMoveJob(
-                        job.id,
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">
-                      No Folder
-                    </option>
-
-                    {folders.map((folderOption) => (
-                      <option
-                        key={folderOption.id}
-                        value={folderOption.id}
-                      >
-                        {folderOption.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-          </>
+          <JobsTable jobs={folderJobs} />
         )}
       </div>
     </main>
