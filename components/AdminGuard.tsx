@@ -1,35 +1,112 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
-const ADMIN_EMAILS = [
+export type AdminAccess = "full" | "checker";
+
+type AdminAccessContextValue = {
+  access: AdminAccess;
+  email: string;
+};
+
+const AdminAccessContext =
+  createContext<AdminAccessContextValue | null>(null);
+
+const FULL_ADMIN_EMAILS = [
   "r3macwan@uwaterloo.ca",
 ];
 
-export function AdminGuard({ children }: { children: React.ReactNode }) {
+const CHECKER_EMAIL =
+  "checkerlogin@rocketry.local";
+
+function getAdminAccess(
+  email?: string
+): AdminAccess | null {
+  if (!email) return null;
+
+  const normalized = email.trim().toLowerCase();
+
+  if (FULL_ADMIN_EMAILS.includes(normalized)) {
+    return "full";
+  }
+
+  if (normalized === CHECKER_EMAIL) {
+    return "checker";
+  }
+
+  return null;
+}
+
+export function useAdminAccess() {
+  return useContext(AdminAccessContext);
+}
+
+export function AdminGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
-  const [ok, setOk] = useState(false);
+
+  const [account, setAccount] =
+    useState<AdminAccessContextValue | null>(null);
 
   useEffect(() => {
+    let active = true;
+
     const checkSession = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-      const email = session?.user.email;
+      if (!active) return;
 
-      if (email && ADMIN_EMAILS.includes(email)) {
-        setOk(true);
-      } else {
-        await supabase.auth.signOut();
-        router.replace("/admin/login");
+      const email = user?.email;
+      const access = error
+        ? null
+        : getAdminAccess(email);
+
+      if (email && access) {
+        setAccount({
+          access,
+          email,
+        });
+
+        return;
       }
+
+      setAccount(null);
+
+      router.replace("/admin/login");
     };
 
-    checkSession();
+    void checkSession();
+
+    return () => {
+      active = false;
+    };
   }, [router]);
 
-  return ok ? <>{children}</> : <div className="card">Checking admin session…</div>;
+  if (!account) {
+    return (
+      <div className="card">
+        Checking admin session…
+      </div>
+    );
+  }
+
+  return (
+    <AdminAccessContext.Provider value={account}>
+      {children}
+    </AdminAccessContext.Provider>
+  );
 }

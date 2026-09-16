@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { Job, Person } from "@/lib/types";
+import type { Job } from "@/lib/types";
 import { useJobs } from "@/lib/jobStore";
+import { useAdminAccess } from "@/components/AdminGuard";
+
+type ReviewDecision = "send-back" | "send-approval" | "approve";
 
 export function AdminReviewActions({
   job,
   actingAdmin,
 }: {
   job: Job;
-  actingAdmin: Person;
+  actingAdmin: string;
 }) {
   const [comment, setComment] = useState("");
   const [machinist, setMachinist] = useState("");
@@ -20,10 +23,43 @@ export function AdminReviewActions({
 
   const { reviewJob } = useJobs();
   const router = useRouter();
+  const access = useAdminAccess();
 
-  const perform = async (
-    decision: "send-back" | "send-approval" | "approve"
-  ) => {
+  const isFullAdmin = access?.access === "full";
+  const isCheckerAccount = access?.access === "checker";
+
+  const isCheckerStage = job.status === "Awaiting Check";
+  const isApprovalStage = job.status === "Awaiting Approval";
+
+  const canCheck =
+    isCheckerStage &&
+    job.checker === actingAdmin &&
+    (isFullAdmin || isCheckerAccount);
+
+  const canApprove =
+    isFullAdmin &&
+    isApprovalStage &&
+    job.approver === actingAdmin;
+
+  const canReview = canCheck || canApprove;
+
+  const perform = async (decision: ReviewDecision) => {
+    if (working || !canReview) {
+      return;
+    }
+
+    if (decision === "approve" && !canApprove) {
+      return;
+    }
+
+    if (decision === "send-approval" && !canCheck) {
+      return;
+    }
+
+    if (decision === "approve" && !machinist.trim()) {
+      return;
+    }
+
     setWorking(true);
 
     try {
@@ -42,7 +78,9 @@ export function AdminReviewActions({
       );
 
       router.push(
-        actingAdmin === "Jack"
+        isCheckerAccount
+          ? "/admin/checkers"
+          : actingAdmin === "Jack"
           ? "/admin/jack"
           : "/admin/raag"
       );
@@ -57,9 +95,15 @@ export function AdminReviewActions({
     }
   };
 
+  if (!canReview) {
+    return null;
+  }
+
   return (
     <div className="card stack">
-      <h2 className="section-title">Admin Action</h2>
+      <h2 className="section-title">
+        {canCheck ? "Checker Action" : "Approver Action"}
+      </h2>
 
       <div className="field">
         <label>Comment</label>
@@ -67,7 +111,7 @@ export function AdminReviewActions({
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Add checker/approver feedback. Comments are appended, never overwritten."
+          placeholder="Add review feedback. Comments are appended, never overwritten."
         />
       </div>
 
@@ -101,7 +145,7 @@ export function AdminReviewActions({
         )}
       </div>
 
-      {job.status === "Awaiting Check" && (
+      {canCheck && (
         <div className="button-row">
           <button
             className="btn btn-danger"
@@ -121,7 +165,7 @@ export function AdminReviewActions({
         </div>
       )}
 
-      {job.status === "Awaiting Approval" && (
+      {canApprove && (
         <>
           <div className="field">
             <label>Machinist</label>

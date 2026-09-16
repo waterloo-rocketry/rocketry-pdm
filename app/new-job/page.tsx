@@ -1,83 +1,165 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { useRouter } from "next/navigation";
 
 import { useJobs } from "@/lib/jobStore";
-import { Person, StockOrdering } from "@/lib/types";
+import {
+  Person,
+  StockOrdering,
+} from "@/lib/types";
 
 import {
   getActiveStockOptions,
   StockOption,
 } from "@/lib/stockRepository";
 
-const opposite = (person: Person): Person =>
-  person === "Jack" ? "Raag" : "Jack";
+import {
+  getActiveCheckers,
+  Checker,
+} from "@/lib/checkerRepository";
 
 export default function NewJobPage() {
   const router = useRouter();
+
   const { createJob } = useJobs();
 
   const [title, setTitle] = useState("");
   const [pdfs, setPdfs] = useState<File[]>([]);
   const [comments, setComments] = useState("");
 
-  const [material, setMaterial] = useState("");
-  const [form, setForm] = useState("");
-  const [stock, setStock] = useState("");
+  const [material, setMaterial] =
+    useState("");
 
-  const [stockOrdering, setStockOrdering] =
-    useState<StockOrdering | "">("");
+  const [form, setForm] =
+    useState("");
 
-  const [stockOptions, setStockOptions] = useState<StockOption[]>([]);
-  const [date, setDate] = useState("");
-  const [checker, setChecker] = useState<Person>("Jack");
-  const [approver, setApprover] = useState<Person>("Raag");
-  const [working, setWorking] = useState(false);
+  const [stock, setStock] =
+    useState("");
+
+  const [
+    stockOrdering,
+    setStockOrdering,
+  ] = useState<StockOrdering | "">("");
+
+  const [
+    stockOptions,
+    setStockOptions,
+  ] = useState<StockOption[]>([]);
+
+  const [
+    checkers,
+    setCheckers,
+  ] = useState<Checker[]>([]);
+
+  const [date, setDate] =
+    useState("");
+
+  const [checker, setChecker] =
+    useState("");
+
+  const [
+    approver,
+    setApprover,
+  ] = useState<Person>("Raag");
+
+  const [
+    working,
+    setWorking,
+  ] = useState(false);
 
   useEffect(() => {
     const loadStockOptions = async () => {
       try {
-        const options = await getActiveStockOptions();
+        const options =
+          await getActiveStockOptions();
+
         setStockOptions(options);
       } catch (error) {
-        console.error("Unable to load stock options:", error);
+        console.error(
+          "Unable to load stock options:",
+          error
+        );
+      }
+    };
+
+    const loadCheckers = async () => {
+      try {
+        const checkerOptions =
+          await getActiveCheckers();
+
+        setCheckers(checkerOptions);
+      } catch (error) {
+        console.error(
+          "Unable to load checkers:",
+          error
+        );
       }
     };
 
     loadStockOptions();
+    loadCheckers();
   }, []);
 
   const materials = useMemo(() => {
-  return Array.from(
-    new Set(
-      stockOptions
-        .map((option) => option.material?.trim())
-        .filter((value): value is string => Boolean(value))
-    )
-  ).sort();
-}, [stockOptions]);
+    return Array.from(
+      new Set(
+        stockOptions
+          .map((option) =>
+            option.material?.trim()
+          )
+          .filter(
+            (
+              value
+            ): value is string =>
+              Boolean(value)
+          )
+      )
+    ).sort();
+  }, [stockOptions]);
 
-const forms = useMemo(() => {
-  return Array.from(
-    new Set(
-      stockOptions
-        .filter(
-          (option) => option.material?.trim() === material
-        )
-        .map((option) => option.form?.trim())
-        .filter((value): value is string => Boolean(value))
-    )
-  ).sort();
-}, [stockOptions, material]);
+  const forms = useMemo(() => {
+    return Array.from(
+      new Set(
+        stockOptions
+          .filter(
+            (option) =>
+              option.material?.trim() ===
+              material
+          )
+          .map((option) =>
+            option.form?.trim()
+          )
+          .filter(
+            (
+              value
+            ): value is string =>
+              Boolean(value)
+          )
+      )
+    ).sort();
+  }, [stockOptions, material]);
 
-const filteredStockOptions = useMemo(() => {
-  return stockOptions.filter(
-    (option) =>
-      option.material?.trim() === material &&
-      option.form?.trim() === form
-  );
-}, [stockOptions, material, form]);
+  const filteredStockOptions =
+    useMemo(() => {
+      return stockOptions.filter(
+        (option) =>
+          option.material?.trim() ===
+            material &&
+          option.form?.trim() ===
+            form
+      );
+    }, [
+      stockOptions,
+      material,
+      form,
+    ]);
 
   const complete = useMemo(
     () =>
@@ -108,20 +190,42 @@ const filteredStockOptions = useMemo(() => {
     ]
   );
 
-  const changeChecker = (value: Person) => {
+  const changeChecker = (
+    value: string
+  ) => {
     setChecker(value);
-    setApprover(opposite(value));
+
+    if (value === "Jack") {
+      setApprover("Raag");
+    }
+
+    if (value === "Raag") {
+      setApprover("Jack");
+    }
   };
 
-  const changeApprover = (value: Person) => {
+  const changeApprover = (
+    value: Person
+  ) => {
     setApprover(value);
-    setChecker(opposite(value));
+
+    if (checker === value) {
+      setChecker("");
+    }
   };
 
-  const submit = async (e: FormEvent) => {
+  const submit = async (
+    e: FormEvent
+  ) => {
     e.preventDefault();
 
-    if (!complete || pdfs.length === 0 || !stockOrdering) return;
+    if (
+      !complete ||
+      pdfs.length === 0 ||
+      !stockOrdering
+    ) {
+      return;
+    }
 
     setWorking(true);
 
@@ -130,10 +234,13 @@ const filteredStockOptions = useMemo(() => {
         title: title.trim(),
         stock,
         stockOrdering,
-        desiredCompletionDate: date,
+        desiredCompletionDate:
+          date,
         checker,
         approver,
-        originalComments: comments.trim(),
+        originalComments:
+          comments.trim(),
+
         pdfs: pdfs.map((pdf) => ({
           filename: pdf.name,
           file: pdf,
@@ -142,8 +249,15 @@ const filteredStockOptions = useMemo(() => {
 
       router.push("/jobs");
     } catch (error) {
-      console.error("Failed to create job:", error);
-      alert("Failed to create job. Check the console for details.");
+      console.error(
+        "Failed to create job:",
+        error
+      );
+
+      alert(
+        "Failed to create job. Check the console for details."
+      );
+
       setWorking(false);
     }
   };
@@ -153,18 +267,31 @@ const filteredStockOptions = useMemo(() => {
       <div className="page-heading">
         <div>
           <h1>New Job</h1>
-          <p>Create a new drawing submission for checking.</p>
+
+          <p>
+            Create a new drawing
+            submission for checking.
+          </p>
         </div>
       </div>
 
-      <form className="stack" onSubmit={submit}>
+      <form
+        className="stack"
+        onSubmit={submit}
+      >
         <div className="card stack">
           <div className="field">
-            <label>Job Title</label>
+            <label>
+              Job Title
+            </label>
 
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) =>
+                setTitle(
+                  e.target.value
+                )
+              }
               placeholder="e.g. Injector Plate Rev B"
             />
           </div>
@@ -172,8 +299,11 @@ const filteredStockOptions = useMemo(() => {
           <div className="grid-2">
             <div className="field">
               <label>
-                PDF Upload (Assemblies must include assembly drawing and all
-                part drawings)
+                PDF Upload
+                (Assemblies must
+                include assembly
+                drawing and all part
+                drawings)
               </label>
 
               <div className="upload-box">
@@ -182,32 +312,55 @@ const filteredStockOptions = useMemo(() => {
                   accept="application/pdf"
                   multiple
                   onChange={(e) =>
-                    setPdfs(Array.from(e.target.files ?? []))
+                    setPdfs(
+                      Array.from(
+                        e.target
+                          .files ??
+                          []
+                      )
+                    )
                   }
                 />
               </div>
 
               {pdfs.length > 0 && (
                 <div className="help">
-                  {pdfs.length} PDF{pdfs.length === 1 ? "" : "s"} selected:
+                  {pdfs.length} PDF
+                  {pdfs.length === 1
+                    ? ""
+                    : "s"}{" "}
+                  selected:
 
                   <ul>
-                    {pdfs.map((pdf) => (
-                      <li key={`${pdf.name}-${pdf.lastModified}`}>
-                        {pdf.name}
-                      </li>
-                    ))}
+                    {pdfs.map(
+                      (pdf) => (
+                        <li
+                          key={`${pdf.name}-${pdf.lastModified}`}
+                        >
+                          {
+                            pdf.name
+                          }
+                        </li>
+                      )
+                    )}
                   </ul>
                 </div>
               )}
             </div>
 
             <div className="field">
-              <label>Comment/Crucial Information</label>
+              <label>
+                Comment/Crucial
+                Information
+              </label>
 
               <textarea
                 value={comments}
-                onChange={(e) => setComments(e.target.value)}
+                onChange={(e) =>
+                  setComments(
+                    e.target.value
+                  )
+                }
                 placeholder="Include anything the checker and approver must know."
               />
             </div>
@@ -215,83 +368,143 @@ const filteredStockOptions = useMemo(() => {
 
           <div className="grid-3">
             <div className="field">
-              <label>Material</label>
+              <label>
+                Material
+              </label>
 
               <select
                 value={material}
                 onChange={(e) => {
-                  setMaterial(e.target.value);
+                  setMaterial(
+                    e.target.value
+                  );
+
                   setForm("");
                   setStock("");
                 }}
               >
-                <option value="">Select material…</option>
+                <option value="">
+                  Select material…
+                </option>
 
-                {materials.map((materialOption) => (
-                  <option
-                    key={materialOption}
-                    value={materialOption}
-                  >
-                    {materialOption}
-                  </option>
-                ))}
+                {materials.map(
+                  (
+                    materialOption
+                  ) => (
+                    <option
+                      key={
+                        materialOption
+                      }
+                      value={
+                        materialOption
+                      }
+                    >
+                      {
+                        materialOption
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div className="field">
-              <label>Form</label>
+              <label>
+                Form
+              </label>
 
               <select
                 value={form}
                 disabled={!material}
                 onChange={(e) => {
-                  setForm(e.target.value);
+                  setForm(
+                    e.target.value
+                  );
+
                   setStock("");
                 }}
               >
-                <option value="">Select form…</option>
+                <option value="">
+                  Select form…
+                </option>
 
-                {forms.map((formOption) => (
-                  <option
-                    key={formOption}
-                    value={formOption}
-                  >
-                    {formOption}
-                  </option>
-                ))}
+                {forms.map(
+                  (
+                    formOption
+                  ) => (
+                    <option
+                      key={
+                        formOption
+                      }
+                      value={
+                        formOption
+                      }
+                    >
+                      {
+                        formOption
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div className="field">
-              <label>Stock Size</label>
+              <label>
+                Stock Size
+              </label>
 
               <select
                 value={stock}
-                disabled={!material || !form}
-                onChange={(e) => setStock(e.target.value)}
+                disabled={
+                  !material ||
+                  !form
+                }
+                onChange={(e) =>
+                  setStock(
+                    e.target.value
+                  )
+                }
               >
-                <option value="">Select stock…</option>
+                <option value="">
+                  Select stock…
+                </option>
 
-                {filteredStockOptions.map((option) => (
-                  <option
-                    key={option.id}
-                    value={option.name}
-                  >
-                    {option.name}
-                  </option>
-                ))}
+                {filteredStockOptions.map(
+                  (option) => (
+                    <option
+                      key={
+                        option.id
+                      }
+                      value={
+                        option.name
+                      }
+                    >
+                      {
+                        option.name
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
           </div>
 
           <div className="grid-3">
             <div className="field">
-              <label>Desired Completion Date</label>
+              <label>
+                Desired Completion
+                Date
+              </label>
 
               <input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) =>
+                  setDate(
+                    e.target.value
+                  )
+                }
               />
             </div>
 
@@ -310,8 +523,15 @@ const filteredStockOptions = useMemo(() => {
                   type="radio"
                   name="stockOrdering"
                   value="admins_order"
-                  checked={stockOrdering === "admins_order"}
-                  onChange={() => setStockOrdering("admins_order")}
+                  checked={
+                    stockOrdering ===
+                    "admins_order"
+                  }
+                  onChange={() =>
+                    setStockOrdering(
+                      "admins_order"
+                    )
+                  }
                 />
 
                 Admins will order stock
@@ -322,56 +542,105 @@ const filteredStockOptions = useMemo(() => {
                   type="radio"
                   name="stockOrdering"
                   value="self_order"
-                  checked={stockOrdering === "self_order"}
-                  onChange={() => setStockOrdering("self_order")}
+                  checked={
+                    stockOrdering ===
+                    "self_order"
+                  }
+                  onChange={() =>
+                    setStockOrdering(
+                      "self_order"
+                    )
+                  }
                 />
 
-                I will order stock myself and inform Jack Crofts or Raag Macwan
+                I will order stock
+                myself and inform Jack
+                Crofts or Raag Macwan
               </label>
             </div>
           </div>
 
           <div className="grid-3">
             <div className="field">
-              <label>Checker</label>
+              <label>
+                Checker
+              </label>
 
               <select
                 value={checker}
                 onChange={(e) =>
-                  changeChecker(e.target.value as Person)
+                  changeChecker(
+                    e.target.value
+                  )
                 }
               >
-                <option>Jack</option>
-                <option>Raag</option>
+                <option value="">
+                  Select checker…
+                </option>
+
+                {checkers.map(
+                  (
+                    checkerOption
+                  ) => (
+                    <option
+                      key={
+                        checkerOption.id
+                      }
+                      value={
+                        checkerOption.name
+                      }
+                    >
+                      {
+                        checkerOption.name
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div className="field">
-              <label>Approver</label>
+              <label>
+                Approver
+              </label>
 
               <select
                 value={approver}
                 onChange={(e) =>
-                  changeApprover(e.target.value as Person)
+                  changeApprover(
+                    e.target
+                      .value as Person
+                  )
                 }
               >
-                <option>Jack</option>
-                <option>Raag</option>
+                <option>
+                  Jack
+                </option>
+
+                <option>
+                  Raag
+                </option>
               </select>
             </div>
           </div>
 
           <div className="notice">
-            Checker and Approver are automatically kept different.
+            Checker and Approver
+            must be different.
           </div>
 
           <div>
             <button
               className="btn btn-primary btn-lg"
               type="submit"
-              disabled={!complete || working}
+              disabled={
+                !complete ||
+                working
+              }
             >
-              {working ? "Creating Job…" : "Submit for Check"}
+              {working
+                ? "Creating Job…"
+                : "Submit for Check"}
             </button>
           </div>
         </div>

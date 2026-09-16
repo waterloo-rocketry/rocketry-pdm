@@ -259,7 +259,7 @@ export async function resubmitJobInSupabase(
 
 export async function reviewJobInSupabase(
   jobId: string,
-  admin: Person,
+  admin: string,
   decision: AdminDecision,
   comment: string,
   markups?: {

@@ -14,9 +14,16 @@ export type DocumentType =
   | "Approver Markup"
   | "Final Approved Drawing";
 
-export type Role = "User" | "Checker" | "Approver" | "Admin" | "Manufacturing";
+export type Role =
+  | "User"
+  | "Checker"
+  | "Approver"
+  | "Admin"
+  | "Manufacturing";
 
-export type StockOrdering = "admins_order" | "self_order";
+export type StockOrdering =
+  | "admins_order"
+  | "self_order";
 
 export type ProjectFolder = {
   id: string;
@@ -58,8 +65,10 @@ export interface Job {
   stockOrdering?: StockOrdering;
   folderId?: string;
   desiredCompletionDate: string;
-  checker: Person;
+
+  checker: string;
   approver: Person;
+
   originalComments: string;
   createdAt: string;
   versions: DocumentVersion[];
@@ -75,9 +84,12 @@ export interface NewJobInput {
   stock: string;
   stockOrdering: StockOrdering;
   desiredCompletionDate: string;
-  checker: Person;
+
+  checker: string;
   approver: Person;
+
   originalComments: string;
+
   pdfs: {
     filename: string;
     file: File;

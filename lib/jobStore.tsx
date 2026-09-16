@@ -54,7 +54,7 @@ interface JobStoreValue {
 
   reviewJob: (
     id: string,
-    admin: Person,
+    admin: string,
     decision: AdminDecision,
     comment: string,
     markups?: {
@@ -188,7 +188,7 @@ export function JobStoreProvider({
 
   const reviewJob = async (
     id: string,
-    admin: Person,
+    admin: string,
     decision: AdminDecision,
     comment: string,
     markups?: {
