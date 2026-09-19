@@ -61,9 +61,16 @@ export interface Job {
   id: string;
   title: string;
   status: JobStatus;
+
+  // Contact information
+  slackName?: string;
+  contactEmail?: string;
+  subsystem?: string;
+
   stock: string;
   stockOrdering?: StockOrdering;
   folderId?: string;
+
   desiredCompletionDate: string;
 
   checker: string;
@@ -71,9 +78,11 @@ export interface Job {
 
   originalComments: string;
   createdAt: string;
+
   versions: DocumentVersion[];
   comments: CommentEntry[];
   workflow: WorkflowEvent[];
+
   completedAt?: string;
   completedBy?: Person;
   machinist?: string;
@@ -81,8 +90,15 @@ export interface Job {
 
 export interface NewJobInput {
   title: string;
+
+  // Contact information
+  slackName: string;
+  contactEmail: string;
+  subsystem: string;
+
   stock: string;
   stockOrdering: StockOrdering;
+
   desiredCompletionDate: string;
 
   checker: string;

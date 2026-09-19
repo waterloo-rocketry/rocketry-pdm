@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -10,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { useJobs } from "@/lib/jobStore";
+
 import {
   Person,
   StockOrdering,
@@ -25,14 +27,37 @@ import {
   Checker,
 } from "@/lib/checkerRepository";
 
+const SUBSYSTEMS = [
+  "Propulsion",
+  "Recovery",
+  "Payload",
+  "Controls",
+  "Airframe",
+  "Infrastructure",
+  "Electrical",
+  "Integration",
+];
+
 export default function NewJobPage() {
   const router = useRouter();
 
   const { createJob } = useJobs();
 
   const [title, setTitle] = useState("");
+
+  const [slackName, setSlackName] =
+    useState("");
+
+  const [contactEmail, setContactEmail] =
+    useState("");
+
+  const [subsystem, setSubsystem] =
+    useState("");
+
   const [pdfs, setPdfs] = useState<File[]>([]);
-  const [comments, setComments] = useState("");
+
+  const [comments, setComments] =
+    useState("");
 
   const [material, setMaterial] =
     useState("");
@@ -115,9 +140,7 @@ export default function NewJobPage() {
             option.material?.trim()
           )
           .filter(
-            (
-              value
-            ): value is string =>
+            (value): value is string =>
               Boolean(value)
           )
       )
@@ -137,9 +160,7 @@ export default function NewJobPage() {
             option.form?.trim()
           )
           .filter(
-            (
-              value
-            ): value is string =>
+            (value): value is string =>
               Boolean(value)
           )
       )
@@ -165,6 +186,12 @@ export default function NewJobPage() {
     () =>
       Boolean(
         title.trim() &&
+          slackName.trim() &&
+          contactEmail.trim() &&
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+            contactEmail.trim()
+          ) &&
+          subsystem &&
           pdfs.length > 0 &&
           comments.trim() &&
           material &&
@@ -178,6 +205,9 @@ export default function NewJobPage() {
       ),
     [
       title,
+      slackName,
+      contactEmail,
+      subsystem,
       pdfs,
       comments,
       material,
@@ -232,12 +262,23 @@ export default function NewJobPage() {
     try {
       await createJob({
         title: title.trim(),
+
+        slackName: slackName.trim(),
+
+        contactEmail:
+          contactEmail.trim(),
+
+        subsystem,
+
         stock,
         stockOrdering,
+
         desiredCompletionDate:
           date,
+
         checker,
         approver,
+
         originalComments:
           comments.trim(),
 
@@ -279,7 +320,56 @@ export default function NewJobPage() {
         className="stack"
         onSubmit={submit}
       >
+
+        {/* CONTACT INFORMATION */}
+
         <div className="card stack">
+          <h2>Contact Information</h2>
+
+          <div className="grid-2">
+            <div className="field">
+              <label>
+                Slack Name
+              </label>
+
+              <input
+                type="text"
+                value={slackName}
+                onChange={(e) =>
+                  setSlackName(
+                    e.target.value
+                  )
+                }
+                placeholder="Enter Slack name"
+                required
+              />
+            </div>
+
+            <div className="field">
+              <label>
+                Email Address
+              </label>
+
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) =>
+                  setContactEmail(
+                    e.target.value
+                  )
+                }
+                placeholder="Enter email address"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* JOB INFORMATION */}
+
+        <div className="card stack">
+          <h2>Job Information</h2>
+
           <div className="field">
             <label>
               Job Title
@@ -295,6 +385,41 @@ export default function NewJobPage() {
               placeholder="e.g. Injector Plate Rev B"
             />
           </div>
+
+          {/* SUBSYSTEM */}
+
+          <div className="field">
+            <label>
+              Subsystem
+            </label>
+
+            <select
+              value={subsystem}
+              onChange={(e) =>
+                setSubsystem(
+                  e.target.value
+                )
+              }
+              required
+            >
+              <option value="">
+                Select subsystem…
+              </option>
+
+              {SUBSYSTEMS.map(
+                (option) => (
+                  <option
+                    key={option}
+                    value={option}
+                  >
+                    {option}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          {/* PDF UPLOAD AND COMMENTS */}
 
           <div className="grid-2">
             <div className="field">
@@ -361,10 +486,12 @@ export default function NewJobPage() {
                     e.target.value
                   )
                 }
-                placeholder="Include anything the checker and approver must know."
+                placeholder={"Additional comments\nRequested Machinist\nSpecified stock (if not part of dropdown)"}
               />
             </div>
           </div>
+
+          {/* STOCK SELECTION */}
 
           <div className="grid-3">
             <div className="field">
@@ -490,6 +617,8 @@ export default function NewJobPage() {
             </div>
           </div>
 
+          {/* COMPLETION DATE */}
+
           <div className="grid-3">
             <div className="field">
               <label>
@@ -511,6 +640,8 @@ export default function NewJobPage() {
             <div />
             <div />
           </div>
+
+          {/* STOCK ORDERING */}
 
           <div className="field">
             <div className="stock-ordering-title">
@@ -559,6 +690,8 @@ export default function NewJobPage() {
               </label>
             </div>
           </div>
+
+          {/* CHECKER AND APPROVER */}
 
           <div className="grid-3">
             <div className="field">
@@ -628,6 +761,8 @@ export default function NewJobPage() {
             Checker and Approver
             must be different.
           </div>
+
+          {/* SUBMIT */}
 
           <div>
             <button

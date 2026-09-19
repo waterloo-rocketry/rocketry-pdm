@@ -41,6 +41,9 @@ export async function createJobInSupabase(
     .from("jobs")
     .insert({
       title: input.title,
+      slack_name: input.slackName,
+      contact_email: input.contactEmail,
+      subsystem: input.subsystem,
       stock_id: stockId,
       stock_ordering: input.stockOrdering,
       desired_completion_date: input.desiredCompletionDate,
